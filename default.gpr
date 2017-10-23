@@ -1,0 +1,20 @@
+project Default is
+
+   for Languages use ("C");
+
+
+   for Source_Dirs use 
+     (
+      ".",
+      "Include"
+     );
+   for Object_Dir use "build";
+   for Exec_Dir use "build";
+   for Main use ("main.c");
+
+
+   package Compiler is
+      for Switches ("C") use ("-g", "-O2");
+   end Compiler;
+
+end Default;

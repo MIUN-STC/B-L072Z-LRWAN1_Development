@@ -1,0 +1,13 @@
+# Blacklist
+*
+
+
+
+# Whitelist
+!/*
+!.gitignore
+!*.h
+!*.md
+!*.c
+!*.s
+!*.ld
