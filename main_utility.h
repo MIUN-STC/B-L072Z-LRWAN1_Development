@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdint.h>
+#include "stm32l072xx.h"
+
 #define SET_BIT(REG, BIT)     ((REG) |= (BIT))
 
 #define CLEAR_BIT(REG, BIT)   ((REG) &= ~(BIT))
@@ -28,31 +31,70 @@
 #define  GPIO_PULLUP        ((uint32_t)0x00000001U)   /*!< Pull-up activation                  */
 #define  GPIO_PULLDOWN      ((uint32_t)0x00000002U)   /*!< Pull-down activation                */
 
-#define VECT_TAB_OFFSET  0x00U
-
-#define HSE_VALUE    ((uint32_t)8000000U) /*!< Value of the External oscillator in Hz */
-#define MSI_VALUE    ((uint32_t)2000000U) /*!< Value of the Internal oscillator in Hz*/
-#define HSI_VALUE    ((uint32_t)16000000U) /*!< Value of the Internal oscillator in Hz*/
 
 
-uint32_t GPIO_Mode (uint32_t Mode, uint32_t Pin)
+#define Bitfield_Modify(Result, Mask, Value) ((Result) = ((Result) & ~(Mask)) | ((Value) & (Mask)))
+
+
+void GPIO_Pin_Mode (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t Mode)
 {
-  return Mode << (Pin * 2U);
+  //Every 2 bit represent 1 pin
+  Bitfield_Modify (GPIOx->MODER, 0x3 << (Pin * 2), Mode << (Pin * 2));
 }
 
 
-uint32_t GPIO_Pull (uint32_t Pull, uint32_t Pin)
+void GPIO_Pin_Pull (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t Pull)
 {
-  return Pull << (Pin * 2U);
+  //Every 2 bit represent 1 pin
+  Bitfield_Modify (GPIOx->PUPDR, 0x3 << (Pin * 2), Pull << (Pin * 2));
 }
 
 
-uint32_t GPIO_Speed (uint32_t Speed, uint32_t Pin)
+void GPIO_Pin_Speed (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t Speed)
 {
-  return Speed << (Pin * 2U);
+  //Every 2 bit represent 1 pin
+  Bitfield_Modify (GPIOx->OSPEEDR, 0x3 << (Pin * 2), Speed << (Pin * 2));
 }
 
-uint32_t GPIO_Pin (uint32_t Pin)
+
+void GPIO_Pin_Set (GPIO_TypeDef * GPIOx, uint32_t Pin)
 {
-  return 1 << (Pin * 1U);
+  GPIOx->BSRR = 1 << Pin;
+}
+
+
+void GPIO_Pin_Clear (GPIO_TypeDef * GPIOx, uint32_t Pin)
+{
+  GPIOx->BRR = 1 << Pin;
+}
+
+
+void GPIO_Pin_Toggle (GPIO_TypeDef * GPIOx, uint32_t Pin)
+{
+  GPIOx->ODR ^= 1 << Pin;
+}
+
+
+void GPIO_Pin_Output (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t Output)
+{
+  //Every 1 bit represent 1 pin
+  Bitfield_Modify (GPIOx->OTYPER, 0x1 << Pin, Output << Pin);
+}
+
+
+//See alternate functiona at DocID027100 Rev 4, Page 37, Table 16, Pin definition.
+void GPIO_Alternate_Function (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t AF)
+{
+  //AFR [0] : 0, 1,  2,  3,  4,  5,  6,  7
+  //AFR [1] : 8, 9, 10, 11, 12, 13, 14, 15
+  //AFR [Pin / 8]
+  //AFR [Pin >> 3]
+  //Every 4 bit represent 1 pin.
+  Bitfield_Modify (GPIOA->AFR[Pin >> 3], 0xF << (Pin * 4), AF << (Pin * 4));
+}
+
+
+void EXTI_Interrupt_Unmask (EXTI_TypeDef * EXTIx, uint32_t Pin)
+{
+  EXTIx->IMR |= 1 << Pin;
 }
