@@ -257,21 +257,25 @@ __INLINE void SystemClock_Config(void)
 
 __INLINE void Configure_EXTI(void)
 {
-  /* Configure Syscfg, exti and nvic for pushbutton PB2 */
-  /* (1) PB2 as source input */
-  /* (2) Unmask port 0 */
-  /* (3) Rising edge */
-  /* (4) Set priority */
-  /* (5) Enable EXTI0_1_IRQn */
+  
+  //System configuration controller (SYSCFG)
   SYSCFG->EXTICR[0] = (SYSCFG->EXTICR[0] & ~SYSCFG_EXTICR1_EXTI2) | SYSCFG_EXTICR1_EXTI2_PB; /* (1) */
+  
+  
   //Extended interrupt and event controller (EXTI)
   //The EXTI allows the management of up to 30 event lines.
-  //EXTI_Interrupt_Unmask (EXTI, STLINK_USART_RX_PIN);
+  
+  //CONFIRMED: This line is required to trigger transmitt interrupt.
+  EXTI_Interrupt_Unmask (EXTI, STLINK_USART_RX_PIN);
+  
+  //TODO: Find out why receive triggers a interrupt without unmasking of IMR for TX pin.
   //EXTI_Interrupt_Unmask (EXTI, STLINK_USART_TX_PIN);
-  EXTI->IMR |= EXTI_IMR_IM2; /* (2) */ 
-  EXTI->RTSR |= EXTI_RTSR_RT2; /* (3) */ 
-  NVIC_SetPriority(EXTI2_3_IRQn, 0); /* (4) */ 
-  NVIC_EnableIRQ(EXTI2_3_IRQn); /* (5) */ 
+  
+  EXTI_Rising_Edge (EXTI, STLINK_USART_RX_PIN);
+  EXTI_Rising_Edge (EXTI, STLINK_USART_TX_PIN);
+  
+  NVIC_SetPriority(EXTI2_3_IRQn, 0);
+  NVIC_EnableIRQ(EXTI2_3_IRQn);
 }
 
 
