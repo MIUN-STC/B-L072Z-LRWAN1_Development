@@ -256,7 +256,7 @@ __INLINE void Configure_EXTI(void)
 {
   
   //System configuration controller (SYSCFG)
-  SYSCFG_Source_Input (SYSCFG, GPIOB, 2):
+  SYSCFG_Source_Input (SYSCFG, GPIOB, 2);
   
   //Extended interrupt and event controller (EXTI)
   //The EXTI allows the management of up to 30 event lines.
