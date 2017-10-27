@@ -147,15 +147,54 @@ void App_Init_USART ()
   
   //USART_CR1_TCIE : A USART interrupt is generated whenever TC=1 in the USART_ISR register
   //[Kenth Johan] Note that when USART transmitts then TC=1
+  //[Kenth Johan] Executing this before ICR_TCCF causes error.
   STLINK_USART->CR1 |= USART_CR1_TCIE;
-
   
-  /* Configure IT */
-  /* (3) Set priority for USART2_IRQn */
-  /* (4) Enable USART2_IRQn */
-  NVIC_SetPriority(USART2_IRQn, 0); /* (3) */
-  NVIC_EnableIRQ(USART2_IRQn); /* (4) */
+  NVIC_SetPriority (USART2_IRQn, 0);
+  NVIC_EnableIRQ (USART2_IRQn);
 }
+
+
+__INLINE static void App_Init_SPI (void)
+{
+  /* Enable the peripheral clock of GPIOA and GPIOB */
+  RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
+  RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
+	
+  /* (1) Select AF mode (10) on PA4, PA6, PA7 */
+  /* (2) AF0 for SPI1 signals */
+  /* (3) Select AF mode (10) on PB3 */
+  /* (4) AF0 for SPI1 signals */
+  GPIOA->MODER = (GPIOA->MODER 
+		  & ~(GPIO_MODER_MODE4 | \
+		      GPIO_MODER_MODE6 | GPIO_MODER_MODE7))\
+  | (GPIO_MODER_MODE4_1 | \
+     GPIO_MODER_MODE6_1 | GPIO_MODER_MODE7_1); /* (1) */
+  GPIOA->AFR[0] = (GPIOA->AFR[0] & \
+		   ~((0xF<<(4*4)) | \
+		     (0xF<<(4*6)) | ((uint32_t)0xF<<(4*7)))); /* (2) */
+  GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE3)) | GPIO_MODER_MODE3_1; /* (3) */
+  GPIOB->AFR[0] = (GPIOB->AFR[0] & ~((0xF<<(4*3)))); /* (4) */
+  
+ /* Enable the peripheral clock SPI1 */
+  RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+  /* Configure SPI1 in master */
+  /* (1) Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
+         CPOL and CPHA at zero (rising first edge), 8-bit data frame */
+  /* (2) Slave select output enabled, RXNE IT */
+  /* (3) Enable SPI1 */
+  SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_BR; /* (1) */
+  SPI1->CR2 = SPI_CR2_SSOE | SPI_CR2_RXNEIE; /* (2) */
+  SPI1->CR1 |= SPI_CR1_SPE; /* (3) */
+ 
+  /* Configure IT */
+  /* (4) Set priority for SPI1_IRQn */
+  /* (5) Enable SPI1_IRQn */
+  NVIC_SetPriority(SPI1_IRQn, 0); /* (4) */
+  NVIC_EnableIRQ(SPI1_IRQn); /* (5) */ 
+}
+
 
 
 int main(void)
@@ -165,24 +204,20 @@ int main(void)
        file (startup_stm32l0xx.s) before to branch to application main.
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32l0xx.c file
-     */
-  SysTick_Config(2000); /* 1ms config */
+   */
+  
+  // 1ms config
+  SysTick_Config(2000);
   SystemClock_Config();
+  
   App_Init_GPIO ();
   
+  if (error != 0) {while(1) {}}
   
-  if (error != 0)
-  {
-    while(1) /* endless loop */
-    {
-    }
-  }
+  //1ms config
+  SysTick_Config(16000);
   
-  
-  SysTick_Config(16000); /* 1ms config */
   App_Init_USART ();
-  
-  //Configure_USART2();
   Configure_EXTI();
 
   for (int I = 0; I < 5; I = I + 1)
@@ -252,15 +287,11 @@ __INLINE void SystemClock_Config(void)
 }
 
 
-
-
-
 __INLINE void Configure_EXTI(void)
 {
   
   //System configuration controller (SYSCFG)
-  SYSCFG->EXTICR[0] = (SYSCFG->EXTICR[0] & ~SYSCFG_EXTICR1_EXTI2) | SYSCFG_EXTICR1_EXTI2_PB; /* (1) */
-  
+  SYSCFG->EXTICR[0] = (SYSCFG->EXTICR[0] & ~SYSCFG_EXTICR1_EXTI2) | SYSCFG_EXTICR1_EXTI2_PB;
   
   //Extended interrupt and event controller (EXTI)
   //The EXTI allows the management of up to 30 event lines.
@@ -280,6 +311,8 @@ __INLINE void Configure_EXTI(void)
 
 
 void NMI_Handler(void){}
+
+
 void HardFault_Handler(void)
 {
   while (1)
@@ -288,7 +321,10 @@ void HardFault_Handler(void)
 }
 
 void SVC_Handler(void){}
+
+
 void PendSV_Handler(void){}
+
 
 void SysTick_Handler(void)
 {
@@ -332,10 +368,12 @@ void SysTick_Handler(void)
   
 }
 
+
 void EXTI0_1_IRQHandler ()
 {
   //__asm__("BKPT");
 }
+
 
 void EXTI2_3_IRQHandler(void)
 {
@@ -389,3 +427,17 @@ void USART2_IRQHandler(void)
 	
 }
 
+
+void SPI1_IRQHandler(void)
+{
+  if((SPI1->SR & SPI_SR_RXNE) == SPI_SR_RXNE)
+  {
+    //SPI1_ByteReceived = 1;
+    //SPI1_Data = (uint8_t)SPI1->DR; /* receive data, clear flag */
+  }
+  else
+  {
+    //error = ERROR_SPI;
+    NVIC_DisableIRQ(SPI1_IRQn); /* Disable SPI1_IRQn */
+  }
+}
