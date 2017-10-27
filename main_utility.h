@@ -87,10 +87,13 @@ void GPIO_Alternate_Function (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t AF)
 {
   //AFR [0] : 0, 1,  2,  3,  4,  5,  6,  7
   //AFR [1] : 8, 9, 10, 11, 12, 13, 14, 15
-  //AFR [Pin / 8]
-  //AFR [Pin >> 3]
   //Every 4 bit represent 1 pin.
-  Bitfield_Modify (GPIOA->AFR[Pin >> 3], 0xF << (Pin * 4), AF << (Pin * 4));
+  //(Pin & 0x7)  : Wrap around 0 .. 15 to 0 .. 7.
+  //(Pin >> 3)   : Map 0 .. 15 to 0 .. 1
+  //(Pos * 4)    : For every 4 bit.
+  //(0xF << Pos) : Clear mask
+  //(AF << Pos) : Value mask
+  Bitfield_Modify (GPIOA->AFR[Pin >> 3], 0xF << ((Pin & 0x7) * 4), AF << ((Pin & 0x7) * 4));
 }
 
 
