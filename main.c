@@ -1,6 +1,7 @@
 #include "stm32l072xx.h"
 #include "system_stm32l0xx.h"
 #include "main_utility.h"
+#include "B-L072Z-LRWAN1.h"
 
 #define HSI_TIMEOUT_VALUE          ((uint32_t)100)  /* 100 ms */
 #define PLL_TIMEOUT_VALUE          ((uint32_t)100)  /* 100 ms */
@@ -17,43 +18,7 @@
 #define ERROR_PLL_TIMEOUT 0x03
 #define ERROR_CLKSWITCH_TIMEOUT 0x04
 
-#define LED_LD2_GREEN_PORT GPIOA
-#define LED_LD2_GREEN_PIN 5
 
-#define LED_LD1_GREEN_PORT GPIOB
-#define LED_LD1_GREEN_PIN 5
-
-#define LED_LD3_BLUE_PORT GPIOB
-#define LED_LD3_BLUE_PIN 6
-
-#define LED_LD4_RED_PORT GPIOB
-#define LED_LD4_RED_PIN 7
-
-#define BUTTON_USER_PORT GPIOB
-#define BUTTON_USER_PIN 2
-
-//PA13 and PA14 is used for debugging
-//GPIO_MODE_AF_PP
-#define SWCLK_PIN 13
-#define SWCLK_MODE GPIO_MODE_AF_PP
-#define SWCLK_PULL GPIO_PULLUP
-#define SWCLK_FREQ GPIO_SPEED_FREQ_VERY_HIGH
-#define SWDIO_PIN 14
-#define SWDIO_MODE GPIO_MODE_AF_PP
-#define SWDIO_PULL GPIO_PULLDOWN
-#define SWDIO_FREQ GPIO_SPEED_FREQ_LOW
-
-
-//See alternate function at DocID027100 Rev 4, Page 37, Table 16, Pin definition.
-#define STLINK_USART USART2
-#define STLINK_USART_RX_PORT GPIOA
-#define STLINK_USART_RX_PIN 2
-#define STLINK_USART_RX_EXTI_LINE 2
-#define STLINK_USART_RX_AF 4
-#define STLINK_USART_TX_PORT GPIOA
-#define STLINK_USART_TX_PIN 3
-#define STLINK_USART_TX_EXTI_LINE 3
-#define STLINK_USART_TX_AF 4
 
 
 static __IO uint32_t Tick;
