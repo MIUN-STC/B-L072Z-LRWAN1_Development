@@ -55,12 +55,15 @@ int main(void)
 void USART2_IRQHandler(void)
 {
 
+  /*
   if((USART2->ISR & USART_ISR_TC) == USART_ISR_TC)
   {
-    USART2->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
+    USART2->ICR = USART_ICR_TCCF; // Clear transfer complete flag
     GPIO_Pin_Toggle (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
   }
-  else if((USART2->ISR & USART_ISR_RXNE) == USART_ISR_RXNE)
+  */
+
+  if((USART2->ISR & USART_ISR_RXNE) == USART_ISR_RXNE)
   {
     uint8_t chartoreceive = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
           
@@ -68,8 +71,8 @@ void USART2_IRQHandler(void)
     {
       case 'b':
       case 'B': 
-	GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-	break;
+        GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        break;
       default: break;
     }
   }

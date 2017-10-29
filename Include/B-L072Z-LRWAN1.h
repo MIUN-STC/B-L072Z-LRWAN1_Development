@@ -392,13 +392,13 @@ void Board_Init ()
   //0: Transmission is not complete
   //1: Transmission is complete
   //Note: If TE bit is reset and no transmission is on going, the TC bit will be set immediately.
-  while((USART2->ISR & USART_ISR_TC) != USART_ISR_TC)
-  {
+  //while((USART2->ISR & USART_ISR_TC) != USART_ISR_TC)
+  //{
     //[ST] add time out here for a robust application
-  }
+  //}
 
   //Clears the TC flag in the USART_ISR register.
-  USART2->ICR = USART_ICR_TCCF;
+  //USART2->ICR = USART_ICR_TCCF;
 
   //USART_CR1_TCIE : A USART interrupt is generated whenever TC=1 in the USART_ISR register
   //[Kenth Johan] Note that when USART transmitts then TC=1
