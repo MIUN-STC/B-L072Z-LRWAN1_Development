@@ -260,6 +260,7 @@ __STATIC_INLINE void SystemClock_Config(void)
 
 void Board_Radio_Init ()
 {
+
   GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_MODE);
   GPIO_Pin_Pull (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_PULL);
   GPIO_Pin_Speed (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_SPEED);
@@ -278,7 +279,10 @@ void Board_Radio_Init ()
   GPIO_Pin_Mode (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_MODE);
   GPIO_Pin_Pull (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_PULL);
   GPIO_Pin_Speed (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_SPEED);
-  GPIO_Alternate_Function (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_AF);
+
+  //TODO: Why this causes USART2 RX not being able to receive?
+  //TODO: Why is SPI still working without this?
+  //GPIO_Alternate_Function (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_AF);
 
   GPIO_Pin_Mode (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_MODE);
   GPIO_Pin_Pull (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_PULL);
@@ -318,6 +322,7 @@ void Board_Radio_Init ()
 }
 
 
+
 void Board_Init ()
 {
   //At this stage the microcontroller clock setting is already configured,
@@ -330,6 +335,8 @@ void Board_Init ()
   if (error != 0) {while(1) {}}
 
 
+  //1ms config
+  SysTick_Config(16000);
 
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
@@ -354,6 +361,9 @@ void Board_Init ()
   GPIO_Pin_Pull (BUTTON_USER_PORT, BUTTON_USER_PIN, GPIO_NOPULL);
   GPIO_Pin_Speed (BUTTON_USER_PORT, BUTTON_USER_PIN, GPIO_SPEED_FREQ_LOW);
 
+
+
+
   //Enable the peripheral clock USART2
   RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 
@@ -373,11 +383,7 @@ void Board_Init ()
   //USART_CR1_RXNEIE : A USART interrupt is generated whenever ORE=1 or RXNE=1 in the USART_ISR register
   //USART_CR1_TCIE : A USART interrupt is generated whenever TC=1 in the USART_ISR register
   //[Kenth Johan] Note that when USART receives then ORE=1 or RXNE=1
-  STLINK_USART->CR1 =
-  USART_CR1_TE |
-  USART_CR1_RE |
-  USART_CR1_RXNEIE |
-  USART_CR1_UE;
+  STLINK_USART->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE | USART_CR1_UE;
 
   //[ST] polling idle frame Transmission
   //USART_ISR_TC bit is set by hardware if the transmission of a frame containing data is complete and if TXE is set.
@@ -402,27 +408,38 @@ void Board_Init ()
   NVIC_SetPriority (USART2_IRQn, 0);
   NVIC_EnableIRQ (USART2_IRQn);
 
-  //System configuration controller (SYSCFG)
-  SYSCFG_Source_Input (SYSCFG, BUTTON_USER_PORT, BUTTON_USER_PIN);
+
 
   //Extended interrupt and event controller (EXTI)
   //The EXTI allows the management of up to 30 event lines.
 
   //CONFIRMED: This line is required to trigger transmitt interrupt.
-  EXTI_Interrupt_Unmask (EXTI, STLINK_USART_RX_PIN);
+  //EXTI_Interrupt_Unmask (EXTI, STLINK_USART_RX_PIN);
 
   //TODO: Find out why receive triggers a interrupt without unmasking the IMR for TX pin.
   //EXTI_Interrupt_Unmask (EXTI, STLINK_USART_TX_PIN);
 
-  EXTI_Rising_Edge (EXTI, STLINK_USART_RX_PIN);
-  EXTI_Rising_Edge (EXTI, STLINK_USART_TX_PIN);
+  //This affects the button
+  //EXTI_Rising_Edge (EXTI, STLINK_USART_RX_PIN);
 
+
+  //EXTI_Rising_Edge (EXTI, STLINK_USART_TX_PIN);
+
+
+  //System configuration controller (SYSCFG)
+  SYSCFG_Source_Input (SYSCFG, BUTTON_USER_PORT, BUTTON_USER_PIN);
+  EXTI_Interrupt_Unmask (EXTI, BUTTON_USER_PIN);
+  EXTI_Rising_Edge (EXTI, BUTTON_USER_PIN);
   NVIC_SetPriority (EXTI2_3_IRQn, 0);
   NVIC_EnableIRQ (EXTI2_3_IRQn);
 
-  //1ms config
-  SysTick_Config(16000);
+
+
 }
+
+
+
+
 
 
 __attribute__((weak)) void Board_Button ();
