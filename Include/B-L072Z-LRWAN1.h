@@ -211,47 +211,56 @@ void Delay1 (__IO uint32_t Delay)
 __STATIC_INLINE void SystemClock_Config(void)
 {
   uint32_t tickstart;
-  /* (1) Enable power interface clock */
-  /* (2) Select voltage scale 1 (1.65V - 1.95V)
-         i.e. (01)  for VOS bits in PWR_CR */
-  /* (3) Enable HSI divided by 4 in RCC-> CR */
-  /* (4) Wait for HSI ready flag and HSIDIV flag */
-  /* (5) Set PLL on HSI, multiply by 8 and divided by 2 */
-  /* (6) Enable the PLL in RCC_CR register */
-  /* (7) Wait for PLL ready flag */
-  /* (8) Select PLL as system clock */
-  /* (9) Wait for clock switched on PLL */
-  RCC->APB1ENR |= (RCC_APB1ENR_PWREN); /* (1) */
-  PWR->CR = (PWR->CR & ~(PWR_CR_VOS)) | PWR_CR_VOS_0; /* (2) */
 
-  RCC->CR |= RCC_CR_HSION | RCC_CR_HSIDIVEN; /* (3) */
+  //Enable power interface clock
+  RCC->APB1ENR |= (RCC_APB1ENR_PWREN);
+
+  //Select voltage scale 1 (1.65V - 1.95V)
+  //i.e. (01)  for VOS bits in PWR_CR */
+  PWR->CR = (PWR->CR & ~(PWR_CR_VOS)) | PWR_CR_VOS_0;
+
+  //Enable HSI divided by 4 in RCC-> CR
+  RCC->CR |= RCC_CR_HSION | RCC_CR_HSIDIVEN;
+
   tickstart = Tick;
-  while ((RCC->CR & (RCC_CR_HSIRDY |RCC_CR_HSIDIVF)) != (RCC_CR_HSIRDY |RCC_CR_HSIDIVF)) /* (4) */
+
+  //Wait for HSI ready flag and HSIDIV flag
+  while ((RCC->CR & (RCC_CR_HSIRDY |RCC_CR_HSIDIVF)) != (RCC_CR_HSIRDY |RCC_CR_HSIDIVF))
   {
     if ((Tick - tickstart ) > HSI_TIMEOUT_VALUE)
     {
-      error = ERROR_HSI_TIMEOUT; /* Report an error */
+      error = ERROR_HSI_TIMEOUT;
       return;
     }
   }
-  RCC->CFGR |= RCC_CFGR_PLLSRC_HSI | RCC_CFGR_PLLMUL8 | RCC_CFGR_PLLDIV2; /* (5) */
-  RCC->CR |= RCC_CR_PLLON; /* (6) */
+
+  //Set PLL on HSI, multiply by 8 and divided by 2
+  RCC->CFGR |= RCC_CFGR_PLLSRC_HSI | RCC_CFGR_PLLMUL8 | RCC_CFGR_PLLDIV2;
+
+  //Enable the PLL in RCC_CR register
+  RCC->CR |= RCC_CR_PLLON;
   tickstart = Tick;
-  while ((RCC->CR & RCC_CR_PLLRDY)  == 0) /* (7) */
+
+  //Wait for PLL ready flag
+  while ((RCC->CR & RCC_CR_PLLRDY)  == 0)
   {
     if ((Tick - tickstart ) > PLL_TIMEOUT_VALUE)
     {
-      error = ERROR_PLL_TIMEOUT; /* Report an error */
+      error = ERROR_PLL_TIMEOUT;
       return;
     }
   }
-  RCC->CFGR |= RCC_CFGR_SW_PLL; /* (8) */
+
+  //Select PLL as system clock
+  RCC->CFGR |= RCC_CFGR_SW_PLL;
   tickstart = Tick;
-  while ((RCC->CFGR & RCC_CFGR_SWS_PLL)  == 0) /* (9) */
+
+  //Wait for clock switched on PLL
+  while ((RCC->CFGR & RCC_CFGR_SWS_PLL)  == 0)
   {
     if ((Tick - tickstart ) > CLOCKSWITCH_TIMEOUT_VALUE)
     {
-      error = ERROR_CLKSWITCH_TIMEOUT; /* Report an error */
+      error = ERROR_CLKSWITCH_TIMEOUT;
       return;
     }
   }
@@ -279,7 +288,6 @@ void Board_Radio_Init ()
   GPIO_Pin_Mode (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_MODE);
   GPIO_Pin_Pull (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_PULL);
   GPIO_Pin_Speed (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_SPEED);
-
   //TODO: Why this causes USART2 RX not being able to receive?
   //TODO: Why is SPI still working without this?
   //GPIO_Alternate_Function (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_AF);
@@ -290,46 +298,43 @@ void Board_Radio_Init ()
   GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
   GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
 
-  /* Enable the peripheral clock of GPIOA and GPIOB */
+  // Enable the peripheral clock of GPIOA and GPIOB
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
 
 
- /* Enable the peripheral clock SPI1 */
+  // Enable the peripheral clock SPI1
   RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
-  /* Configure SPI1 in master */
-  /* (1) Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
-         CPOL and CPHA at zero (rising first edge), 8-bit data frame */
-  /* (2) Slave select output enabled, RXNE IT */
-  /* (3) Enable SPI1 */
+  //Configure SPI1 in master
+  //Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
+  //CPOL and CPHA at zero (rising first edge), 8-bit data frame
   SPI1->CR1 =
   SPI_CR1_MSTR |
   SPI_CR1_BR |
   SPI_CR1_SSM |
-  0; /* (1) */
+  0;
+
+  //Slave select output enabled, RXNE IT
   SPI1->CR2 =
   SPI_CR2_SSOE |
   //SPI_CR2_RXNEIE|
-  0; /* (2) */
-  SPI1->CR1 |= SPI_CR1_SPE; /* (3) */
+  0;
 
-  /* Configure IT */
-  /* (4) Set priority for SPI1_IRQn */
-  /* (5) Enable SPI1_IRQn */
-  NVIC_SetPriority(SPI1_IRQn, 0); /* (4) */
-  NVIC_EnableIRQ(SPI1_IRQn); /* (5) */
+  //Enable SPI1
+  SPI1->CR1 |= SPI_CR1_SPE;
+
+  NVIC_SetPriority(SPI1_IRQn, 0);
+  NVIC_EnableIRQ(SPI1_IRQn);
 }
-
 
 
 void Board_Init ()
 {
   //At this stage the microcontroller clock setting is already configured,
   //this is done through SystemInit() function which is called from
-  // startup file (startup_stm32l0xx.s) before to branch to application main.
-  //To reconfigure the default setting of SystemInit() function, refer to system_stm32l0xx.c file
-  // 1ms config
+  //startup file (startup_stm32l0xx.s) before to branch to application main.
+  //To reconfigure the default setting of SystemInit() function, refer to system_stm32l0xx.c file 1ms config
   SysTick_Config(2000);
   SystemClock_Config();
   if (error != 0) {while(1) {}}

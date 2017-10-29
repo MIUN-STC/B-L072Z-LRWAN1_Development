@@ -13,10 +13,8 @@ uint32_t Timeon_LD4_RED = 0;
 
 int main(void)
 {
-  
   Board_Init ();
 
-  
   USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
   Board_Radio_Init ();
   
@@ -28,24 +26,23 @@ int main(void)
   Delay1 (1000);
   */
   
-  
   uint32_t Timeout = 0;
   while (1) 
   {
     if (Timeout == 0)
     {
       GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-      if (Timeon_LD1_GREEN > 0) {GPIO_Pin_Clear (GPIOB, LED_LD1_GREEN_PIN);Timeon_LD1_GREEN--;}
-      if (Timeon_LD3_BLUE > 0) {GPIO_Pin_Clear (GPIOB, LED_LD3_BLUE_PIN);Timeon_LD3_BLUE--;}
-      if (Timeon_LD4_RED > 0) {GPIO_Pin_Clear (GPIOB, LED_LD4_RED_PIN);Timeon_LD4_RED--;}
+      GPIO_Pin_Clear (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);
+      GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+      GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
       Timeout = 2000000;
     }
     else if (Timeout == 1000000)
     {
       GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-      if (Timeon_LD1_GREEN > 0) {GPIO_Pin_Set (GPIOB, LED_LD1_GREEN_PIN);}
-      if (Timeon_LD3_BLUE > 0) {GPIO_Pin_Set (GPIOB, LED_LD3_BLUE_PIN);}
-      if (Timeon_LD4_RED > 0) {GPIO_Pin_Set (GPIOB, LED_LD4_RED_PIN);}
+      if (Timeon_LD1_GREEN > 0) {GPIO_Pin_Set (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);Timeon_LD1_GREEN--;}
+      if (Timeon_LD3_BLUE > 0) {GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);Timeon_LD3_BLUE--;}
+      if (Timeon_LD4_RED > 0) {GPIO_Pin_Set (LED_LD4_RED_PORT, LED_LD4_RED_PIN);Timeon_LD4_RED--;}
     }
     Timeout--;
   }
@@ -54,7 +51,6 @@ int main(void)
 
 void USART2_IRQHandler(void)
 {
-
   /*
   if((USART2->ISR & USART_ISR_TC) == USART_ISR_TC)
   {
@@ -62,12 +58,11 @@ void USART2_IRQHandler(void)
     GPIO_Pin_Toggle (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
   }
   */
-
   if((USART2->ISR & USART_ISR_RXNE) == USART_ISR_RXNE)
   {
-    uint8_t chartoreceive = (uint8_t)(USART2->RDR); /* Receive data, clear flag */
-          
-    switch(chartoreceive)
+    //Receive data, clear flag
+    uint8_t Data = (uint8_t)(USART2->RDR);  
+    switch(Data)
     {
       case 'b':
       case 'B': 
@@ -76,11 +71,7 @@ void USART2_IRQHandler(void)
       default: break;
     }
   }
-
 }
-
-
-
 
 
 void Board_Button ()

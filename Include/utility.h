@@ -193,6 +193,7 @@ void SPI_Transmit8_Blocking (SPI_TypeDef * SPIx, uint8_t Value)
   SPIx->DR = Value;
 }
 
+
 uint8_t SPI_Transfer8 (SPI_TypeDef * SPIx, uint8_t Outdata)
 {
   uint8_t Indata;
