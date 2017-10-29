@@ -464,3 +464,20 @@ void EXTI0_1_IRQHandler ()
 {
   //__asm__("BKPT");
 }
+
+
+void SPI1_IRQHandler(void)
+{
+  if((SPI1->SR & SPI_SR_RXNE) == SPI_SR_RXNE)
+  {
+    uint8_t Data = (uint8_t)SPI1->DR;
+    (void) Data;
+  }
+  else
+  {
+    //error = ERROR_SPI;
+    NVIC_DisableIRQ(SPI1_IRQn);
+  }
+}
+
+

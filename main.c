@@ -1,6 +1,7 @@
 #include "stm32l072xx.h"
 #include "system_stm32l0xx.h"
 #include "utility.h"
+#include "sx1276.h"
 #include "B-L072Z-LRWAN1.h"
 
 
@@ -90,23 +91,7 @@ void USART2_IRQHandler(void)
 }
 
 
-void SPI1_IRQHandler(void)
-{
-  if((SPI1->SR & SPI_SR_RXNE) == SPI_SR_RXNE)
-  {
-    uint8_t Data = (uint8_t)SPI1->DR;
-    Timeon_LD3_BLUE++;
-    //SPI1_ByteReceived = 1;
-    //SPI1_Data = (uint8_t)SPI1->DR;
-    //USART_Send_Value_Blocking (USART2, ':');
-    //USART_Transmit8_Blocking (USART2, Data);
-  }
-  else
-  {
-    //error = ERROR_SPI;
-    NVIC_DisableIRQ(SPI1_IRQn);
-  }
-}
+
 
 
 void Board_Button ()
@@ -115,7 +100,7 @@ void Board_Button ()
   if ((SPI1->SR & SPI_SR_TXE) == SPI_SR_TXE)
   {
     GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
-    R = SPI_Transfer8 (SPI1, 0x42);
+    R = SPI_Transfer8 (SPI1, SX1276_LORA_VERSION);
     USART_Transmit8_Blocking (USART2, R);
     R = SPI_Transfer8 (SPI1, 0x00);
     USART_Transmit8_Blocking (USART2, R);
