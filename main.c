@@ -2,8 +2,8 @@
 #include "system_stm32l0xx.h"
 #include "utility.h"
 #include "sx1276.h"
-#include "B-L072Z-LRWAN1.h"
-
+#include "Board.h"
+#include <stdio.h>
 
 uint32_t Timeon_LD1_GREEN = 0;
 uint32_t Timeon_LD2_GREEN = 0;
@@ -76,15 +76,23 @@ void USART2_IRQHandler(void)
 
 void Board_Button ()
 {
+  char Buffer [100];
   Timeon_LD1_GREEN++;
   uint8_t R;
   if ((SPI1->SR & SPI_SR_TXE) == SPI_SR_TXE)
   {
-    GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
-    R = SPI_Transfer8 (SPI1, SX1276_LORA_VERSION);
-    USART_Transmit8_Blocking (USART2, R);
-    R = SPI_Transfer8 (SPI1, 0x00);
-    USART_Transmit8_Blocking (USART2, R);
-    GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
+    //R = Radio_Read_Register (SPI1, SX1276_LORA_VERSION);
+    //USART_Transmit8_Blocking (USART2, R);
+    //sprintf (Buffer, "%x : %x", R);
+    //USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
+    
+
+    
+    for (int I = 0; I < 128; I = I + 1)
+    {
+      R = Radio_Register_Read (RADIO_SPI, I);
+      sprintf (Buffer, "%x : %x\n", I, R);
+      USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
+    }
   }
 }

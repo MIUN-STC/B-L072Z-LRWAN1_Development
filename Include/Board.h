@@ -3,6 +3,7 @@
 #include "stm32l072xx.h"
 #include "utility.h"
 
+#define BOARD_NAME "B-L072Z-LRWAN1"
 
 #define LED_LD2_GREEN_PORT GPIOA
 #define LED_LD2_GREEN_PIN 5
@@ -14,17 +15,19 @@
 #define LED_LD4_RED_PIN 7
 
 
-//There is only one button this board.
+//There is only one button on this board.
 #define BUTTON_USER_PORT GPIOB
 #define BUTTON_USER_PIN 2
 
 
 //PA13 and PA14 is used for debugging
 //GPIO_MODE_AF_PP
+#define SWCLK_PORT GPIOA
 #define SWCLK_PIN 13
 #define SWCLK_MODE GPIO_MODE_AF_PP
 #define SWCLK_PULL GPIO_PULLUP
 #define SWCLK_FREQ GPIO_SPEED_FREQ_VERY_HIGH
+#define SWDIO_PORT GPIOA
 #define SWDIO_PIN 14
 #define SWDIO_MODE GPIO_MODE_AF_PP
 #define SWDIO_PULL GPIO_PULLDOWN
@@ -43,6 +46,8 @@
 #define STLINK_USART_TX_AF 4
 
 
+//SX1276
+#define RADIO_SPI SPI1
 
 #define RADIO_RESET_PORT  GPIOC
 #define RADIO_RESET_PIN   0
@@ -303,30 +308,12 @@ void Board_Radio_Init ()
   RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
 
 
-  // Enable the peripheral clock SPI1
-  RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
-
-  //Configure SPI1 in master
-  //Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
-  //CPOL and CPHA at zero (rising first edge), 8-bit data frame
-  SPI1->CR1 =
-  SPI_CR1_MSTR |
-  SPI_CR1_BR |
-  SPI_CR1_SSM |
-  0;
-
-  //Slave select output enabled, RXNE IT
-  SPI1->CR2 =
-  SPI_CR2_SSOE |
-  //SPI_CR2_RXNEIE|
-  0;
-
-  //Enable SPI1
-  SPI1->CR1 |= SPI_CR1_SPE;
+  SPI_Init (RADIO_SPI);
 
   NVIC_SetPriority(SPI1_IRQn, 0);
   NVIC_EnableIRQ(SPI1_IRQn);
 }
+
 
 
 void Board_Init ()
@@ -503,3 +490,26 @@ void SPI1_IRQHandler(void)
 }
 
 
+uint8_t Radio_Transfer8 (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
+{
+  uint8_t Response;
+  GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
+  SPI_Transfer8 (SPI1, Address);
+  Response = SPI_Transfer8 (SPI1, Value);
+  GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
+  return Response;
+}
+
+
+uint8_t Radio_Register_Read (SPI_TypeDef * SPIx, uint8_t Address)
+{
+  uint8_t Response;
+  Response = Radio_Transfer8 (SPIx, Address & 0x7f, 0x00);
+  return Response;
+}
+
+
+void Radio_Register_Write (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
+{
+  Radio_Transfer8 (SPIx, Address | 0x80, Value);
+}

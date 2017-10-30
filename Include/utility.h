@@ -198,10 +198,43 @@ uint8_t SPI_Transfer8 (SPI_TypeDef * SPIx, uint8_t Outdata)
 {
   uint8_t Indata;
   volatile uint8_t *DR = (volatile uint8_t*)&(SPIx->DR);
+  //Wait until transmit buffer is empty.
+  //The SPI_SR_TXE flag (Tx buffer empty) is set when the data
+  //are transferred from the Tx buffer to the shift register.
+  //It indicates that the internal Tx buffer is ready to be loaded with the next data.
   while ((SPIx->SR & SPI_SR_TXE) == 0){}
+  //Writing to DR writes to TX buffer.
   *DR = Outdata;
+  //Wait until receive buffer is empty.
+  //The SPI_SR_RXNE flag (Rx buffer not empty) is set on the last sampling clock edge,
+  //when the data are transferred from the shift register to the Rx buffer.
   while ((SPIx->SR & SPI_SR_RXNE) == 0){}
+  //Reading from DR reads from RX buffer.
   Indata = *DR;
   return Indata;
 }
 
+
+void SPI_Init (SPI_TypeDef * SPIx)
+{
+  // Enable the peripheral clock SPI1
+  RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+  //Configure SPI1 in master
+  //Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
+  //CPOL and CPHA at zero (rising first edge), 8-bit data frame
+  SPIx->CR1 =
+  SPI_CR1_MSTR |
+  SPI_CR1_BR |
+  SPI_CR1_SSM |
+  0;
+
+  //Slave select output enabled, RXNE IT
+  SPIx->CR2 =
+  SPI_CR2_SSOE |
+  //SPI_CR2_RXNEIE|
+  0;
+
+  //Enable SPI1
+  SPIx->CR1 |= SPI_CR1_SPE;
+}
