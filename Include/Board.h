@@ -3,7 +3,9 @@
 #include "stm32l072xx.h"
 #include "utility.h"
 
+
 #define BOARD_NAME "B-L072Z-LRWAN1"
+
 
 #define LED_LD2_GREEN_PORT GPIOA
 #define LED_LD2_GREEN_PIN 5
@@ -46,152 +48,10 @@
 #define STLINK_USART_TX_AF 4
 
 
-//SX1276
-#define RADIO_SPI SPI1
-
-#define RADIO_RESET_PORT  GPIOC
-#define RADIO_RESET_PIN   0
-#define RADIO_RESET_MODE  GPIO_MODE_OUTPUT_PP
-#define RADIO_RESET_PULL  GPIO_NOPULL
-#define RADIO_RESET_SPEED GPIO_SPEED_FREQ_LOW
-
-#define RADIO_MOSI_PORT   GPIOA
-#define RADIO_MOSI_PIN    7
-#define RADIO_MOSI_MODE   GPIO_MODE_AF_PP
-#define RADIO_MOSI_AF     0
-#define RADIO_MOSI_PULL   GPIO_PULLDOWN
-#define RADIO_MOSI_SPEED  GPIO_SPEED_FREQ_HIGH
-
-#define RADIO_MISO_PORT   GPIOA
-#define RADIO_MISO_PIN    6
-#define RADIO_MISO_MODE   GPIO_MODE_AF_PP
-#define RADIO_MISO_AF     0
-#define RADIO_MISO_PULL   GPIO_PULLDOWN
-#define RADIO_MISO_SPEED  GPIO_SPEED_FREQ_HIGH
-
-#define RADIO_SCLK_PORT   GPIOB
-#define RADIO_SCLK_PIN    3
-#define RADIO_SCLK_MODE   GPIO_MODE_AF_PP
-#define RADIO_SCLK_AF     0
-#define RADIO_SCLK_PULL   GPIO_PULLDOWN
-#define RADIO_SCLK_SPEED  GPIO_SPEED_FREQ_HIGH
-
-#define RADIO_NSS_PORT    GPIOA
-#define RADIO_NSS_PIN     15
-#define RADIO_NSS_MODE    GPIO_MODE_AF_PP
-#define RADIO_NSS_PULL    GPIO_PULLUP
-#define RADIO_NSS_SPEED   GPIO_SPEED_FREQ_HIGH
-
-//https://community.st.com/community/stm32-community/blog/2017/04/05/lora-discovery-kit
-/*
-CMWX1ZZABZ-091 (MURATA LORA)
- 1  PA12/USB_DP
- 2  PA11/USB_DM
- 3  GND
- 4  VDD_USB
- 5  VDD_MCU
- 6  VDD_RF
- 7  GND
- 8  PB4/DBG_SX1276_DIO2
- 9  PC13/DBG_SX1276_DIO3
-10  PA5/DBG_SX1276_DIO4 ?? UNUSED
-11  PA4/DBG_SX1276_DIO5 ?? UNUSED
-12  PB1/DBG_SX1276_DIO1
-13  PB4/DBG_SX1276_DIO0
-14  PB15/SPI2_MOSI
-15  PB14/SPI2_MISO
-16  PB13/SPI2_SCK
-17  PB12/SPI2_NSS
-18  PA10/USART1_RX
-19  PA9/USART1_TX
-20  PA8/MCO
-21  PA5/ADC5/DAC2
-22  PA4/ADC4/DAC1
-23  PA3/ADC3/LPUART1_RX
-24  PA2/ADC2/LPUART1_TX
-25  GND
-26  ANT
-27  GND
-28  PA1/DBG_CRF1 (ANT_SWITCH_RX)
-29  PC1/DBG_CRF3 (ANT_SWITCH_TX_BOOST)
-30  PC2/DBG_CRF2 (ANT_SWITCH_TX_RFO)
-31  STSAFE_NRST
-32  VREF+
-33  PA0/WKUP1
-34  MCU_NRST
-35  PB8/I2C1_SCL
-36  PB9/I2C1_SDA
-37  PB2/LPTIM1_OUT
-38  PB7/LPTIM1_IN2
-39  PB6/LPTIM1_ETR
-40  PB5/LPTIM1_IN1
-41  PA13/SWDIO
-42  PA14/SWCLK
-43  BOOT0
-44  GND
-45  PH1/OSC_OUT
-46  PH0/OSC_IN
-47  TCXO_OUT
-48  VDD_TCXO
-49  GND
-..
-57  GND
-
-WLCSP49
- 1  A1  VDD_USB
- 2  A2  PA15  RASIO_NSS
- 3  A3  PB3   RADIO_SCK
- 4  A4  PB5   LPTIM1_IN1
- 5  A5  BOOT0
- 6  A6  PB9   I2C1_SDA
- 7  A7  VDD
- 8  B1  PA12  USB_DP RADIO_TCXO_VCC ??
- 9  B2  PA14  SWCLK
-10  B3  PB4   RADIO_DIO_0
-11  B4  PB6   LPTIM1_ETR
-12  B5  PB8   I2C1_SCL
-13  B6  VDD
-14  B7  PC13  RADIO_DIO_3
-15  C1  PA10  USART1_RX
-16  C2  PA13  SWDIO
-17  C3  PB7   LPTIM1_IN2
-18  C4  PC1   RADIO_ANY_SWITCH_TX_BOOST (CRF3)
-19  C5  PC0   RADIO_RESET
-20  C6  PC14  OSC32_IN
-21  C7  PC15  OSC32_OUT
-22  D1  PA8   MSO
-23  D2  PA11  USB_DM
-24  D3  PB1   RADIO_DIO_1
-25  D4  VSS
-26  D5  NRST
-27  D6  PH0   OSC_IN
-28  D7  PH1   OSC_OUT
-29  E1  PB15  SPI2_MOSI
-30  E2  PA9   USART1_TX
-31  E3  PB2   LPTIM1_OUT
-32  E4  PA1   RADIO_ANT_SWITCH_RX (CRF1)
-33  E5  PA0   WKUP1
-34  E6  VREF+
-35  E7  PC2   RADIO_ANT_SWITCH_TX_RFO (CRF2)
-36  F1  PB14  SPI2_MISO
-37  F2  PB13  SPI2_SCK
-38  F3  PB11  ?? I2C2_SCL
-39  F4  PA7   RADIO_MOSI
-40  F5  PA4   RADIO_DIO_5
-41  F6  PA2   ADC2/LPUART1_TX
-42  F7  VDDA
-43  G1  PB12  SPI2_NSS
-44  G2  VDD
-45  G3  PB10  ?? I2C2_SDA
-46  G4  PB0   RADIO_DIO_2
-47  G5  PA6   RADIO_MISO
-48  G6  PA5   RADIO_DIO_4
-49  G7  PA3   ADC2/LPUART1_TX
- */
-
 #define HSI_TIMEOUT_VALUE          ((uint32_t)100)  /* 100 ms */
 #define PLL_TIMEOUT_VALUE          ((uint32_t)100)  /* 100 ms */
 #define CLOCKSWITCH_TIMEOUT_VALUE  ((uint32_t)5000) /* 5 s    */
+
 
 // Error codes used to make the red led blinking
 #define ERROR_USART_TRANSMIT 0x01
@@ -272,64 +132,6 @@ __STATIC_INLINE void SystemClock_Config(void)
 }
 
 
-void Board_Radio_Init ()
-{
-
-  GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_MODE);
-  GPIO_Pin_Pull (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_PULL);
-  GPIO_Pin_Speed (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_SPEED);
-  GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
-
-  GPIO_Pin_Mode (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_MODE);
-  GPIO_Pin_Pull (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_PULL);
-  GPIO_Pin_Speed (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_SPEED);
-  GPIO_Alternate_Function (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_AF);
-
-  GPIO_Pin_Mode (RADIO_MISO_PORT, RADIO_MISO_PIN, RADIO_MISO_MODE);
-  GPIO_Pin_Pull (RADIO_MISO_PORT, RADIO_MISO_PIN, RADIO_MISO_PULL);
-  GPIO_Pin_Speed (RADIO_MISO_PORT, RADIO_MISO_PIN, RADIO_MISO_SPEED);
-  GPIO_Alternate_Function (RADIO_MISO_PORT, RADIO_MISO_PIN, RADIO_MISO_AF);
-
-  GPIO_Pin_Mode (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_MODE);
-  GPIO_Pin_Pull (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_PULL);
-  GPIO_Pin_Speed (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_SPEED);
-  //TODO: Why this causes USART2 RX not being able to receive?
-  //TODO: Why is SPI still working without this?
-  //GPIO_Alternate_Function (RADIO_SCLK_PORT, RADIO_SCLK_PIN, RADIO_SCLK_AF);
-
-  GPIO_Pin_Mode (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_MODE);
-  GPIO_Pin_Pull (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_PULL);
-  GPIO_Pin_Speed (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_SPEED);
-  //GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
-  //GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
-  
-/*
-  GPIO_Pin_Mode (GPIOA, 4, GPIO_MODE_AF_PP);
-  GPIO_Pin_Speed (GPIOA, 4, GPIO_SPEED_FREQ_HIGH);
-  GPIO_Pin_Pull (GPIOA, 4, GPIO_PULLUP);
-  GPIO_Alternate_Function (GPIOA, 4, 0);
-  GPIO_Pin_Set (GPIOA, 4);
-  
-  
-  GPIO_Pin_Mode (GPIOA, 5, GPIO_MODE_AF_PP);
-  GPIO_Pin_Speed (GPIOA, 5, GPIO_SPEED_FREQ_HIGH);
-  GPIO_Pin_Pull (GPIOA, 5, GPIO_PULLUP);
-  GPIO_Alternate_Function (GPIOA, 5, 0);
-*/
-  
-  // Enable the peripheral clock of GPIOA and GPIOB
-  RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
-  RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
-
-
-  SPI_Init (RADIO_SPI);
-
-  NVIC_SetPriority(SPI1_IRQn, 0);
-  NVIC_EnableIRQ(SPI1_IRQn);
-}
-
-
-
 void Board_Init ()
 {
   //At this stage the microcontroller clock setting is already configured,
@@ -367,9 +169,7 @@ void Board_Init ()
   GPIO_Pin_Pull (BUTTON_USER_PORT, BUTTON_USER_PIN, GPIO_NOPULL);
   GPIO_Pin_Speed (BUTTON_USER_PORT, BUTTON_USER_PIN, GPIO_SPEED_FREQ_LOW);
 
-
-
-
+  
   //Enable the peripheral clock USART2
   RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 
@@ -438,16 +238,10 @@ void Board_Init ()
   EXTI_Rising_Edge (EXTI, BUTTON_USER_PIN);
   NVIC_SetPriority (EXTI2_3_IRQn, 0);
   NVIC_EnableIRQ (EXTI2_3_IRQn);
-
-
-
 }
 
 
-
-
-
-
+//Weak functions can be overloaded.
 __attribute__((weak)) void Board_Button ();
 
 
@@ -501,32 +295,6 @@ void SPI1_IRQHandler(void)
     //error = ERROR_SPI;
     NVIC_DisableIRQ(SPI1_IRQn);
   }
-}
-
-
-uint8_t Radio_Transfer8 (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
-{
-  uint8_t Response;
-  //Set NSS to 0 by enabling the SPI.
-  SPIx->CR1 |= SPI_CR1_SPE;
-  SPI_Transfer8_Blocking (SPI1, Address);
-  Response = SPI_Transfer8_Blocking (SPI1, Value);
-  SPIx->CR1 &= ~SPI_CR1_SPE;
-  return Response;
-}
-
-
-uint8_t Radio_Register_Read (SPI_TypeDef * SPIx, uint8_t Address)
-{
-  uint8_t Response;
-  Response = Radio_Transfer8 (SPIx, Address & 0x7f, 0x00);
-  return Response;
-}
-
-
-void Radio_Register_Write (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
-{
-  Radio_Transfer8 (SPIx, Address | 0x80, Value);
 }
 
 
