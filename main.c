@@ -68,7 +68,14 @@ void USART2_IRQHandler(void)
       case 'B': 
         GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         break;
-      default: break;
+      
+      case 'r':
+      case 'R': 
+        Board_Enter_Standby ();
+        break;
+        
+      default: 
+        break;
     }
   }
 }

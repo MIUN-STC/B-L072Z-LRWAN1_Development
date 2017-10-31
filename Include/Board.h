@@ -513,3 +513,33 @@ void Radio_Register_Write (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
 {
   Radio_Transfer8 (SPIx, Address | 0x80, Value);
 }
+
+
+void Board_Enter_Standby ()
+{
+  //Enable Clocks
+  RCC->APB1ENR |= RCC_APB1ENR_PWREN;
+  
+  //Set PWR_CSR_EWUP1 bit which represent wake up pin PA0 and will be pulled down.
+  //The device will wake up in Reset_Handler when PA0 goes HIGH.
+  //[Kenth Johan] The STM32L072CZ can only wake up from PWR_CSR_EWUP1.
+  //Do not enable PWR_CSR_EWUP1 | PWR_CSR_EWUP2 | PWR_CSR_EWUP3 bits, it will not work.
+  PWR->CSR |= PWR_CSR_EWUP1;
+  
+  //Clear the WUF flag after 2 clock cycles
+  PWR->CR |= PWR_CR_CWUF;
+  
+  //V_{REFINT} is off in low-power mode
+  PWR->CR |= PWR_CR_ULP;   
+  
+  //Enter Standby mode when the CPU enters deepsleep
+  PWR->CR |= PWR_CR_PDDS;
+  
+  //Low-power mode = stop mode
+  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+  
+  //Reenter low-power mode after ISR
+  SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk;
+  
+  __WFI();
+}
