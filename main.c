@@ -3,7 +3,7 @@
 #include "utility.h"
 #include "sx1276.h"
 #include "Board.h"
-#include "Board_Radio.h"
+#include "Radio.h"
 #include <stdio.h>
 
 uint32_t Timeon_LD1_GREEN = 0;
@@ -18,7 +18,7 @@ void Print_Radio ()
   char Buffer [100];
   for (int I = 0; I < 128; I = I + 1)
   {
-    R = Board_Radio_Read (RADIO_SPI, I);
+    R = Radio_Read (I);
     sprintf (Buffer, "%x : %x\n", I, R);
     USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
   }
@@ -30,7 +30,9 @@ int main(void)
   Board_Init ();
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
-  Board_Radio_Init ();
+
+  //915 MHz
+  Radio_Init (915E6);
   
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");

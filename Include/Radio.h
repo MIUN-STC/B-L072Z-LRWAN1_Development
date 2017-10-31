@@ -109,7 +109,7 @@ WLCSP49
 #pragma once
 
 #include "utility.h"
-
+#include "SX1276.h"
 
 #define RADIO_NAME "SX1276"
 
@@ -148,12 +148,87 @@ WLCSP49
 #define RADIO_NSS_PULL    GPIO_PULLUP
 #define RADIO_NSS_SPEED   GPIO_SPEED_FREQ_HIGH
 
+#define RADIO_ANT_TX_BOOST_PORT GPIOC
+#define RADIO_ANT_TX_BOOST_PIN  1
 
+#define RADIO_ANT_TX_RFO_PORT GPIOC
+#define RADIO_ANT_TX_RFO_PIN  2
 
+#define RADIO_ANT_RX_PORT GPIOA
+#define RADIO_ANT_RX_PIN  1
 
-void Board_Radio_Init ()
+//Read or write to address location.
+uint8_t Radio_Transfer8 (uint8_t Address, uint8_t Value)
 {
+  uint8_t Response;
+  //Set NSS to 0 by enabling the SPI.
+  RADIO_SPI->CR1 |= SPI_CR1_SPE;
+  SPI_Transfer8_Blocking (RADIO_SPI, Address);
+  Response = SPI_Transfer8_Blocking (RADIO_SPI, Value);
+  RADIO_SPI->CR1 &= ~SPI_CR1_SPE;
+  return Response;
+}
 
+
+//Read value from address location.
+//Returns read value.
+uint8_t Radio_Read (uint8_t Address)
+{
+  uint8_t Response;
+  Response = Radio_Transfer8 (Address & 0x7f, 0x00);
+  return Response;
+}
+
+
+//Write value to address location.
+void Radio_Write (uint8_t Address, uint8_t Value)
+{
+  Radio_Transfer8 (Address | 0x80, Value);
+}
+
+
+void Radio_Sleep ()
+{
+  uint8_t Values = 0;
+
+  //This bit can be modified only in Sleep mode.
+  //A write operation on other device modes is ignored.
+  //LoRaTM Mode
+  Values |= RFLR_OPMODE_LONGRANGEMODE_ON;
+  Values |= RFLR_OPMODE_SLEEP;
+
+  Radio_Write (SX1276_LORA_OPMODE, Values);
+}
+
+
+void Radio_Idle ()
+{
+  uint8_t Values = 0;
+
+  //This bit can be modified only in Sleep mode.
+  //A write operation on other device modes is ignored.
+  //LoRaTM Mode
+  Values |= RFLR_OPMODE_LONGRANGEMODE_ON;
+  Values |= RFLR_OPMODE_STANDBY;
+
+  Radio_Write (SX1276_LORA_OPMODE, Values);
+}
+
+
+void Radio_Set_Carrier_Frequency (long Frequency)
+{
+  //Resolution is 61.035 Hz if F(XOSC) = 32 MHz. Default value is
+  //0x6c8000 = 434 MHz. Register values must be modified only
+  //when device is in SLEEP or STAND-BY mode.
+  uint64_t frf = ((uint64_t)Frequency << 19) / 32000000;
+  Radio_Write (SX1276_LORA_FRFMSB, (uint8_t)(frf >> 16));
+  Radio_Write (SX1276_LORA_FRFMID, (uint8_t)(frf >> 8));
+  Radio_Write (SX1276_LORA_FRFLSB, (uint8_t)(frf >> 0));
+}
+
+
+void Radio_Init (long Frequency)
+{
   GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_MODE);
   GPIO_Pin_Pull (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_PULL);
   GPIO_Pin_Speed (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_SPEED);
@@ -182,57 +257,46 @@ void Board_Radio_Init ()
   //GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
   //GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
 
-/*
-  GPIO_Pin_Mode (GPIOA, 4, GPIO_MODE_AF_PP);
-  GPIO_Pin_Speed (GPIOA, 4, GPIO_SPEED_FREQ_HIGH);
-  GPIO_Pin_Pull (GPIOA, 4, GPIO_PULLUP);
-  GPIO_Alternate_Function (GPIOA, 4, 0);
-  GPIO_Pin_Set (GPIOA, 4);
-
-
-  GPIO_Pin_Mode (GPIOA, 5, GPIO_MODE_AF_PP);
-  GPIO_Pin_Speed (GPIOA, 5, GPIO_SPEED_FREQ_HIGH);
-  GPIO_Pin_Pull (GPIOA, 5, GPIO_PULLUP);
-  GPIO_Alternate_Function (GPIOA, 5, 0);
-*/
-
   // Enable the peripheral clock of GPIOA and GPIOB
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
 
-
   SPI_Init (RADIO_SPI);
 
+
+  //TODO: Why is this required when IRQ is not used?
   NVIC_SetPriority(SPI1_IRQn, 0);
   NVIC_EnableIRQ(SPI1_IRQn);
+
+  Radio_Sleep ();
+
+  Radio_Set_Carrier_Frequency (Frequency);
+
+  //write base address in FIFO data buffer for TX modulator
+  Radio_Write (SX1276_LORA_FIFOTXBASEADDR, 0);
+  //read base address in FIFO data buffer for RX demodulator
+  Radio_Write (SX1276_LORA_FIFORXBASEADDR, 0);
+
+
+
+  uint8_t Value;
+
+  // set LNA boost
+  Value = Radio_Read (SX1276_LORA_LNA);
+  Value |= 0x03; //???
+  Radio_Write (SX1276_LORA_LNA, Value);
+
+  // set auto AGC
+  Radio_Write (SX1276_LORA_MODEMCONFIG3, 0x04);
+
+
+  //set output power
+  Value = 0;
+  Value |= RFLR_PACONFIG_PASELECT_PABOOST;
+  Radio_Write (SX1276_LORA_PACONFIG, Value);
+
+  Radio_Idle ();
 }
 
 
-//Read or write to address location.
-uint8_t Board_Radio_Transfer8 (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
-{
-  uint8_t Response;
-  //Set NSS to 0 by enabling the SPI.
-  SPIx->CR1 |= SPI_CR1_SPE;
-  SPI_Transfer8_Blocking (SPI1, Address);
-  Response = SPI_Transfer8_Blocking (SPI1, Value);
-  SPIx->CR1 &= ~SPI_CR1_SPE;
-  return Response;
-}
 
-
-//Read value from address location.
-//Returns read value.
-uint8_t Board_Radio_Read (SPI_TypeDef * SPIx, uint8_t Address)
-{
-  uint8_t Response;
-  Response = Board_Radio_Transfer8 (SPIx, Address & 0x7f, 0x00);
-  return Response;
-}
-
-
-//Write value to address location.
-void Board_Radio_Write (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
-{
-  Board_Radio_Transfer8 (SPIx, Address | 0x80, Value);
-}
