@@ -187,14 +187,7 @@ void USART_Transmit_CString_Blocking (USART_TypeDef * USARTx, char * CString)
 }
 
 
-void SPI_Transmit8_Blocking (SPI_TypeDef * SPIx, uint8_t Value)
-{
-  while ((SPIx->SR & SPI_SR_TXE) == 0){}
-  SPIx->DR = Value;
-}
-
-
-uint8_t SPI_Transfer8 (SPI_TypeDef * SPIx, uint8_t Outdata)
+uint8_t SPI_Transfer8_Blocking (SPI_TypeDef * SPIx, uint8_t Outdata)
 {
   uint8_t Indata;
   volatile uint8_t *DR = (volatile uint8_t*)&(SPIx->DR);
@@ -219,6 +212,10 @@ void SPI_Init (SPI_TypeDef * SPIx)
 {
   // Enable the peripheral clock SPI1
   RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+  
+  //Controlling NSS:
+  //SPI_CR1_SSM = 0 and SPI_CR2_SSOE = 1 and SPI_CR1_SPE = 0 => NSS = 0
+  //SPI_CR1_SSM = 0 and SPI_CR2_SSOE = 1 and SPI_CR1_SPE = 1 => NSS = 1
 
   //Configure SPI1 in master
   //Master selection, BR: Fpclk/256 (due to C13 on the board, SPI_CLK is set to the minimum)
@@ -226,8 +223,10 @@ void SPI_Init (SPI_TypeDef * SPIx)
   SPIx->CR1 =
   SPI_CR1_MSTR |
   SPI_CR1_BR |
-  SPI_CR1_SSM |
+  //SPI_CR1_SSM |
   0;
+  
+  SPIx->CR1 &= ~SPI_CR1_SSM;
 
   //Slave select output enabled, RXNE IT
   SPIx->CR2 =
@@ -235,6 +234,7 @@ void SPI_Init (SPI_TypeDef * SPIx)
   //SPI_CR2_RXNEIE|
   0;
 
-  //Enable SPI1
-  SPIx->CR1 |= SPI_CR1_SPE;
+  //Enable/disable SPI
+  //SPIx->CR1 |= SPI_CR1_SPE;
+  SPIx->CR1 &= ~SPI_CR1_SPE;
 }

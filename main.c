@@ -11,6 +11,19 @@ uint32_t Timeon_LD3_BLUE = 0;
 uint32_t Timeon_LD4_RED = 0;
 
 
+void Print_Radio ()
+{
+  uint8_t R;
+  char Buffer [100];
+  for (int I = 0; I < 128; I = I + 1)
+  {
+    R = Radio_Register_Read (RADIO_SPI, I);
+    sprintf (Buffer, "%x : %x\n", I, R);
+    USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
+  }
+}
+
+
 int main(void)
 {
   Board_Init ();
@@ -18,14 +31,14 @@ int main(void)
   USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
   Board_Radio_Init ();
   
-  /*
-  USART_Transmit_CString_Blocking (STLINK_USART, "Reset RADIO\r\n");
+
+  USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
   GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
   Delay1 (1000);
   GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
   Delay1 (1000);
-  */
-  
+
+  USART_Transmit_CString_Blocking (STLINK_USART, "Loop main\r\n");
   uint32_t Timeout = 0;
   while (1) 
   {
@@ -85,21 +98,10 @@ void Board_Button ()
 {
   char Buffer [100];
   Timeon_LD1_GREEN++;
-  uint8_t R;
+  
   if ((SPI1->SR & SPI_SR_TXE) == SPI_SR_TXE)
   {
-    //R = Radio_Read_Register (SPI1, SX1276_LORA_VERSION);
-    //USART_Transmit8_Blocking (USART2, R);
-    //sprintf (Buffer, "%x : %x", R);
-    //USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
-    
-
-    
-    for (int I = 0; I < 128; I = I + 1)
-    {
-      R = Radio_Register_Read (RADIO_SPI, I);
-      sprintf (Buffer, "%x : %x\n", I, R);
-      USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
-    }
+    Print_Radio ();
   }
 }
+

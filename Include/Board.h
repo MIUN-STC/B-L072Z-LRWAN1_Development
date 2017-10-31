@@ -78,8 +78,8 @@
 
 #define RADIO_NSS_PORT    GPIOA
 #define RADIO_NSS_PIN     15
-#define RADIO_NSS_MODE    GPIO_MODE_OUTPUT_PP
-#define RADIO_NSS_PULL    GPIO_NOPULL
+#define RADIO_NSS_MODE    GPIO_MODE_AF_PP
+#define RADIO_NSS_PULL    GPIO_PULLUP
 #define RADIO_NSS_SPEED   GPIO_SPEED_FREQ_HIGH
 
 //https://community.st.com/community/stm32-community/blog/2017/04/05/lora-discovery-kit
@@ -300,9 +300,23 @@ void Board_Radio_Init ()
   GPIO_Pin_Mode (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_MODE);
   GPIO_Pin_Pull (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_PULL);
   GPIO_Pin_Speed (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_SPEED);
-  GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
-  GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
-
+  //GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
+  //GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
+  
+/*
+  GPIO_Pin_Mode (GPIOA, 4, GPIO_MODE_AF_PP);
+  GPIO_Pin_Speed (GPIOA, 4, GPIO_SPEED_FREQ_HIGH);
+  GPIO_Pin_Pull (GPIOA, 4, GPIO_PULLUP);
+  GPIO_Alternate_Function (GPIOA, 4, 0);
+  GPIO_Pin_Set (GPIOA, 4);
+  
+  
+  GPIO_Pin_Mode (GPIOA, 5, GPIO_MODE_AF_PP);
+  GPIO_Pin_Speed (GPIOA, 5, GPIO_SPEED_FREQ_HIGH);
+  GPIO_Pin_Pull (GPIOA, 5, GPIO_PULLUP);
+  GPIO_Alternate_Function (GPIOA, 5, 0);
+*/
+  
   // Enable the peripheral clock of GPIOA and GPIOB
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
@@ -493,10 +507,11 @@ void SPI1_IRQHandler(void)
 uint8_t Radio_Transfer8 (SPI_TypeDef * SPIx, uint8_t Address, uint8_t Value)
 {
   uint8_t Response;
-  GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
-  SPI_Transfer8 (SPI1, Address);
-  Response = SPI_Transfer8 (SPI1, Value);
-  GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
+  //Set NSS to 0 by enabling the SPI.
+  SPIx->CR1 |= SPI_CR1_SPE;
+  SPI_Transfer8_Blocking (SPI1, Address);
+  Response = SPI_Transfer8_Blocking (SPI1, Value);
+  SPIx->CR1 &= ~SPI_CR1_SPE;
   return Response;
 }
 
