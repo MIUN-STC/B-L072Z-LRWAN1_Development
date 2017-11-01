@@ -110,6 +110,8 @@ WLCSP49
 
 #include "utility.h"
 #include "SX1276.h"
+#include "GPIO.h"
+#include "SPI.h"
 
 #define RADIO_NAME "SX1276"
 
@@ -156,6 +158,10 @@ WLCSP49
 
 #define RADIO_ANT_RX_PORT GPIOA
 #define RADIO_ANT_RX_PIN  1
+
+
+#define RADIO_RCC_IOPENR (RCC_IOPENR_IOPAEN | RCC_IOPENR_IOPBEN | RCC_IOPENR_IOPCEN)
+
 
 //Read or write to address location.
 uint8_t Radio_Transfer8 (uint8_t Address, uint8_t Value)
@@ -215,7 +221,7 @@ void Radio_Idle ()
 }
 
 
-void Radio_Set_Carrier_Frequency (long Frequency)
+void Radio_Set_Carrier_Frequency (uint32_t Frequency)
 {
   //Resolution is 61.035 Hz if F(XOSC) = 32 MHz. Default value is
   //0x6c8000 = 434 MHz. Register values must be modified only
@@ -227,7 +233,7 @@ void Radio_Set_Carrier_Frequency (long Frequency)
 }
 
 
-void Radio_Init (long Frequency)
+void Radio_Init (uint32_t Frequency)
 {
   GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_MODE);
   GPIO_Pin_Pull (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_PULL);
@@ -254,12 +260,9 @@ void Radio_Init (long Frequency)
   GPIO_Pin_Mode (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_MODE);
   GPIO_Pin_Pull (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_PULL);
   GPIO_Pin_Speed (RADIO_NSS_PORT, RADIO_NSS_PIN, RADIO_NSS_SPEED);
-  //GPIO_Pin_Set (RADIO_NSS_PORT, RADIO_NSS_PIN);
-  //GPIO_Pin_Clear (RADIO_NSS_PORT, RADIO_NSS_PIN);
 
   // Enable the peripheral clock of GPIOA and GPIOB
-  RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
-  RCC->IOPENR |= RCC_IOPENR_GPIOBEN;
+  RCC->IOPENR |= RADIO_RCC_IOPENR;
 
   SPI_Init (RADIO_SPI);
 
@@ -299,4 +302,89 @@ void Radio_Init (long Frequency)
 }
 
 
+void Radio_Header_Implicit ()
+{
+  uint8_t Value;
+  Value = Radio_Read (SX1276_LORA_LNA);
+  Value |= 0x01;
+  Radio_Write (SX1276_LORA_MODEMCONFIG1, Value);
+}
 
+
+void Radio_Send (uint8_t * Data, uint8_t Count)
+{
+  Radio_Write (SX1276_LORA_FIFOADDRPTR, 0);
+  Radio_Write (SX1276_LORA_PAYLOADLENGTH, 0);
+  //int Length;
+  //Length = Radio_Read (SX1276_LORA_PAYLOADLENGTH);
+  for (int I = 0; I < Count; I = I + 1)
+  {
+    Radio_Write (SX1276_LORA_FIFO, Data [I]);
+  }
+  uint8_t Value = 0;
+  Value |= RFLR_OPMODE_LONGRANGEMODE_ON;
+  Value |= RFLR_OPMODE_TRANSMITTER;
+  Radio_Write (SX1276_LORA_OPMODE, Value);
+
+  // wait for TX done
+  while ((Radio_Read (SX1276_LORA_IRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0);
+
+  // clear IRQ's
+  Radio_Write (SX1276_LORA_IRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
+}
+
+
+uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
+{
+  uint8_t Length;
+  Length = Radio_Read (SX1276_LORA_RXNBBYTES);
+  for (uint8_t I = 0; I < Length; I = I + 1)
+  {
+    Data [I] = Radio_Read (SX1276_LORA_FIFO);
+  }
+  return Length;
+}
+
+
+uint8_t Radio_Parse_Packet (uint8_t Size)
+{
+  uint8_t Length = 0;
+  uint8_t irqFlags = Radio_Read (SX1276_LORA_IRQFLAGS);
+
+  Radio_Header_Implicit ();
+
+  Radio_Write (SX1276_LORA_PAYLOADLENGTH, Size);
+
+  Radio_Write (SX1276_LORA_IRQFLAGS, irqFlags);
+
+
+  if ((irqFlags & RFLR_IRQFLAGS_RXDONE_MASK) && (irqFlags & RFLR_IRQFLAGS_PAYLOADCRCERROR_MASK) == 0)
+  {
+    Length = Radio_Read (SX1276_LORA_PAYLOADLENGTH);
+
+    // set FIFO address to current RX address
+    Radio_Write (SX1276_LORA_FIFOADDRPTR, Radio_Read (SX1276_LORA_FIFORXCURRENTADDR));
+
+    // put in standby mode
+    Radio_Idle ();
+  }
+  else if (Radio_Read (SX1276_LORA_OPMODE) != (RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE))
+  {
+    // not currently in RX mode
+    // reset FIFO address
+    Radio_Write (SX1276_LORA_FIFOADDRPTR, 0);
+    // put in single RX mode
+    Radio_Write (SX1276_LORA_OPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
+  }
+
+  return Length;
+}
+
+
+int32_t Radio_RSSI (uint32_t Frequency)
+{
+  int32_t Value;
+  Value = Radio_Read(SX1276_LORA_PKTRSSIVALUE);
+  Value = Value - Frequency < 868E6 ? 164 : 157;
+  return Value;
+}

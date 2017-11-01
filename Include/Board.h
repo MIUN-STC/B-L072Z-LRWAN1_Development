@@ -111,15 +111,15 @@ __STATIC_INLINE void SystemClock_Config(void)
   RCC->APB1ENR |= (RCC_APB1ENR_PWREN);
 
   PWR_Regulator_Voltage (PWR_REGULATOR_150mV);
-  Clock_MSI_Frequency (MSI_FREQUENCY_4194000Hz);
+  //Clock_MSI_Frequency (MSI_FREQUENCY_4194000Hz);
   //Select voltage scale 1 (1.65V - 1.95V)
   //i.e. (01)  for VOS bits in PWR_CR */
   //PWR->CR = (PWR->CR & ~(PWR_CR_VOS)) | PWR_CR_VOS_0;
 
   //Enable HSI divided by 4 in RCC-> CR
-  //RCC->CR |= RCC_CR_HSION | RCC_CR_HSIDIVEN;
+  RCC->CR |= RCC_CR_HSION | RCC_CR_HSIDIVEN;
 
-  /*
+
   tickstart = Tick;
 
   //Wait for HSI ready flag and HSIDIV flag
@@ -162,7 +162,7 @@ __STATIC_INLINE void SystemClock_Config(void)
       return;
     }
   }
-  */
+
 }
 
 
@@ -172,37 +172,25 @@ void Board_Init ()
   //this is done through SystemInit() function which is called from
   //startup file (startup_stm32l0xx.s) before to branch to application main.
   //To reconfigure the default setting of SystemInit() function, refer to system_stm32l0xx.c file 1ms config
-  SysTick_Config(100);
-  //SystemClock_Config();
+  SysTick_Config(2000);
+  SystemClock_Config();
   //if (error != 0) {while(1) {}}
   //1ms config
   //SysTick_Config(16000);
   
-  init_clock_r ();
-
+  //init_clock_r ();
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
-
   //RCC->CFGR &= (uint32_t) RCC_CFGR_MCOSEL;
   //RCC->CFGR |= RCC_CFGR_MCO_SYSCLK | RCC_CFGR_MCO_PRE_4;
-
-  
   Bitfield_Modify (RCC->CFGR, RCC_CFGR_MCOSEL_Msk, RCC_CFGR_MCOSEL_MSI);
   Bitfield_Modify (RCC->CFGR, RCC_CFGR_MCOPRE_Msk, RCC_CFGR_MCOPRE_DIV1);
-  
   GPIO_Pin_Mode (GPIOB, 13, GPIO_MODE_AF_PP);
   GPIO_Pin_Pull (GPIOB, 13, GPIO_PULLUP);
   GPIO_Pin_Speed (GPIOB, 13, GPIO_SPEED_FREQ_HIGH);
   GPIO_Alternate_Function (GPIOB, 13, 1);
-   while (1) {};
-  GPIO_Pin_Mode (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_MODE_OUTPUT_PP);
-  GPIO_Pin_Pull (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_NOPULL);
-  GPIO_Pin_Speed (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_SPEED_FREQ_LOW);
-  GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-  
- 
-  
-  
+
+
   GPIO_Pin_Mode (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_MODE_OUTPUT_PP);
   GPIO_Pin_Pull (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_NOPULL);
   GPIO_Pin_Speed (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN, GPIO_SPEED_FREQ_LOW);
