@@ -33,7 +33,6 @@ int main(void)
 
   //915 MHz
   Radio_Init (915E6);
-  
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
   GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
@@ -51,9 +50,10 @@ int main(void)
       GPIO_Pin_Clear (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);
       GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
       GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
-      Timeout = 2000000;
+      Timeout = 200000;
+      Print_Radio ();
     }
-    else if (Timeout == 1000000)
+    else if (Timeout == 100000)
     {
       GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
       if (Timeon_LD1_GREEN > 0) {GPIO_Pin_Set (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);Timeon_LD1_GREEN--;}
