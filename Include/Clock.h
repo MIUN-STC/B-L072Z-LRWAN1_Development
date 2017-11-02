@@ -20,5 +20,13 @@ void Clock_MSI_Frequency (uint32_t Frequency)
 }
 
 
+void Clock_LSI_Enable ()
+{
+  //Enable the LSI clock
+  RCC->CSR |= RCC_CSR_LSION;
+  //Wait while it is not ready
+  while((RCC->CSR & RCC_CSR_LSIRDY) != RCC_CSR_LSIRDY) {}
+}
+
 
 

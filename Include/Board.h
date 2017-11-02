@@ -9,6 +9,7 @@
 #include "SYSCFG.h"
 #include "GPIO.h"
 #include "Clock.h"
+#include <stdio.h>
 
 #define BOARD_NAME "B-L072Z-LRWAN1"
 
@@ -349,6 +350,7 @@ void RTC_IRQHandler(void)
     EXTI->PR = EXTI_PR_PR20; /* clear exti line 20 flag */
     //GPIOB->ODR ^= (1 << 4) ; /* Toggle Green LED */
     GPIO_Pin_Toggle (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
+    printf ("RTC_IRQHandler\n");
   }
 }
 
@@ -417,7 +419,7 @@ __INLINE static void Configure_RTC(void)
   { 
     /* add time out here for a robust application */
   }
-  RTC->WUTR = 0xFF00; /* (10) */
+  RTC->WUTR = 0xA000; /* (10) */
   RTC->CR = RTC_CR_WUTE | RTC_CR_WUTIE; /* (11) */
   RTC->WPR = 0xFE; /* (12) */
   RTC->WPR = 0x64; /* (12) */
