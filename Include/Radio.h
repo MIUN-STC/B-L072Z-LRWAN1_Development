@@ -150,6 +150,7 @@ WLCSP49
 #define RADIO_NSS_PULL    GPIO_PULLUP
 #define RADIO_NSS_SPEED   GPIO_SPEED_FREQ_HIGH
 
+/*
 #define RADIO_ANT_TX_BOOST_PORT GPIOC
 #define RADIO_ANT_TX_BOOST_PIN  1
 
@@ -158,9 +159,34 @@ WLCSP49
 
 #define RADIO_ANT_RX_PORT GPIOA
 #define RADIO_ANT_RX_PIN  1
-
+*/
 
 #define RADIO_RCC_IOPENR (RCC_IOPENR_IOPAEN | RCC_IOPENR_IOPBEN | RCC_IOPENR_IOPCEN)
+
+
+
+
+
+
+enum { EU868_F1 = 868100000,      // g1   SF7-12
+       EU868_F2 = 868300000,      // g1   SF7-12 FSK SF7/250
+       EU868_F3 = 868500000,      // g1   SF7-12
+       EU868_F4 = 868850000,      // g2   SF7-12
+       EU868_F5 = 869050000,      // g2   SF7-12
+       EU868_F6 = 869525000,      // g3   SF7-12
+       EU868_J4 = 864100000,      // g2   SF7-12  used during join
+       EU868_J5 = 864300000,      // g2   SF7-12   ditto
+       EU868_J6 = 864500000,      // g2   SF7-12   ditto
+};
+
+
+
+
+
+
+
+
+
 
 
 //Read or write to address location.
@@ -203,7 +229,7 @@ void Radio_Sleep ()
   Values |= RFLR_OPMODE_LONGRANGEMODE_ON;
   Values |= RFLR_OPMODE_SLEEP;
 
-  Radio_Write (SX1276_LORA_OPMODE, Values);
+  Radio_Write (SX1276_RegOPMODE, Values);
 }
 
 
@@ -217,7 +243,7 @@ void Radio_Idle ()
   Values |= RFLR_OPMODE_LONGRANGEMODE_ON;
   Values |= RFLR_OPMODE_STANDBY;
 
-  Radio_Write (SX1276_LORA_OPMODE, Values);
+  Radio_Write (SX1276_RegOPMODE, Values);
 }
 
 
@@ -227,9 +253,9 @@ void Radio_Set_Carrier_Frequency (uint32_t Frequency)
   //0x6c8000 = 434 MHz. Register values must be modified only
   //when device is in SLEEP or STAND-BY mode.
   uint64_t frf = ((uint64_t)Frequency << 19) / 32000000;
-  Radio_Write (SX1276_LORA_FRFMSB, (uint8_t)(frf >> 16));
-  Radio_Write (SX1276_LORA_FRFMID, (uint8_t)(frf >> 8));
-  Radio_Write (SX1276_LORA_FRFLSB, (uint8_t)(frf >> 0));
+  Radio_Write (SX1276_RegFRFMSB, (uint8_t)(frf >> 16));
+  Radio_Write (SX1276_RegFRFMID, (uint8_t)(frf >> 8));
+  Radio_Write (SX1276_RegFRFLSB, (uint8_t)(frf >> 0));
 }
 
 
@@ -276,27 +302,28 @@ void Radio_Init (uint32_t Frequency)
   Radio_Set_Carrier_Frequency (Frequency);
 
   //write base address in FIFO data buffer for TX modulator
-  Radio_Write (SX1276_LORA_FIFOTXBASEADDR, 0);
+  Radio_Write (SX1276_RegFIFOTXBASEADDR, 0);
   //read base address in FIFO data buffer for RX demodulator
-  Radio_Write (SX1276_LORA_FIFORXBASEADDR, 0);
+  Radio_Write (SX1276_RegFIFORXBASEADDR, 0);
 
 
 
   uint8_t Value;
 
   // set LNA boost
-  Value = Radio_Read (SX1276_LORA_LNA);
-  Value |= 0x03; //???
-  Radio_Write (SX1276_LORA_LNA, Value);
+  Value = 0;
+  Value |= RFLR_LNA_GAIN_G1;
+  Value |= RFLR_LNA_BOOST_HF_ON;
+  Radio_Write (SX1276_RegLNA, Value);
 
   // set auto AGC
-  Radio_Write (SX1276_LORA_MODEMCONFIG3, 0x04);
+  Radio_Write (SX1276_RegMODEMCONFIG3, 0x04);
 
 
   //set output power
   Value = 0;
   Value |= RFLR_PACONFIG_PASELECT_PABOOST;
-  Radio_Write (SX1276_LORA_PACONFIG, Value);
+  Radio_Write (SX1276_RegPACONFIG, Value);
 
   Radio_Idle ();
 }
@@ -305,42 +332,42 @@ void Radio_Init (uint32_t Frequency)
 void Radio_Header_Implicit ()
 {
   uint8_t Value;
-  Value = Radio_Read (SX1276_LORA_LNA);
-  Value |= 0x01;
-  Radio_Write (SX1276_LORA_MODEMCONFIG1, Value);
+  Value = Radio_Read (SX1276_RegMODEMCONFIG1);
+  Value |= RFLR_MODEMCONFIG1_IMPLICITHEADER_ON;
+  Radio_Write (SX1276_RegMODEMCONFIG1, Value);
 }
 
 
 void Radio_Send (uint8_t * Data, uint8_t Count)
 {
-  Radio_Write (SX1276_LORA_FIFOADDRPTR, 0);
-  Radio_Write (SX1276_LORA_PAYLOADLENGTH, 0);
+  Radio_Write (SX1276_RegFIFOADDRPTR, 0);
+  Radio_Write (SX1276_RegPAYLOADLENGTH, 0);
   //int Length;
-  //Length = Radio_Read (SX1276_LORA_PAYLOADLENGTH);
+  //Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
   for (int I = 0; I < Count; I = I + 1)
   {
-    Radio_Write (SX1276_LORA_FIFO, Data [I]);
+    Radio_Write (SX1276_RegFIFO, Data [I]);
   }
   uint8_t Value = 0;
   Value |= RFLR_OPMODE_LONGRANGEMODE_ON;
   Value |= RFLR_OPMODE_TRANSMITTER;
-  Radio_Write (SX1276_LORA_OPMODE, Value);
+  Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done
-  while ((Radio_Read (SX1276_LORA_IRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0);
+  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0);
 
   // clear IRQ's
-  Radio_Write (SX1276_LORA_IRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
+  Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
 }
 
 
 uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
 {
   uint8_t Length;
-  Length = Radio_Read (SX1276_LORA_RXNBBYTES);
+  Length = Radio_Read (SX1276_RegRXNBBYTES);
   for (uint8_t I = 0; I < Length; I = I + 1)
   {
-    Data [I] = Radio_Read (SX1276_LORA_FIFO);
+    Data [I] = Radio_Read (SX1276_RegFIFO);
   }
   return Length;
 }
@@ -349,32 +376,32 @@ uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
 uint8_t Radio_Parse_Packet (uint8_t Size)
 {
   uint8_t Length = 0;
-  uint8_t irqFlags = Radio_Read (SX1276_LORA_IRQFLAGS);
+  uint8_t irqFlags = Radio_Read (SX1276_RegIRQFLAGS);
 
   Radio_Header_Implicit ();
 
-  Radio_Write (SX1276_LORA_PAYLOADLENGTH, Size);
+  Radio_Write (SX1276_RegPAYLOADLENGTH, Size);
 
-  Radio_Write (SX1276_LORA_IRQFLAGS, irqFlags);
+  Radio_Write (SX1276_RegIRQFLAGS, irqFlags);
 
 
   if ((irqFlags & RFLR_IRQFLAGS_RXDONE_MASK) && (irqFlags & RFLR_IRQFLAGS_PAYLOADCRCERROR_MASK) == 0)
   {
-    Length = Radio_Read (SX1276_LORA_PAYLOADLENGTH);
+    Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
 
     // set FIFO address to current RX address
-    Radio_Write (SX1276_LORA_FIFOADDRPTR, Radio_Read (SX1276_LORA_FIFORXCURRENTADDR));
+    Radio_Write (SX1276_RegFIFOADDRPTR, Radio_Read (SX1276_RegFIFORXCURRENTADDR));
 
     // put in standby mode
     Radio_Idle ();
   }
-  else if (Radio_Read (SX1276_LORA_OPMODE) != (RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE))
+  else if (Radio_Read (SX1276_RegOPMODE) != (RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE))
   {
     // not currently in RX mode
     // reset FIFO address
-    Radio_Write (SX1276_LORA_FIFOADDRPTR, 0);
+    Radio_Write (SX1276_RegFIFOADDRPTR, 0);
     // put in single RX mode
-    Radio_Write (SX1276_LORA_OPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
+    Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
   }
 
   return Length;
@@ -384,7 +411,7 @@ uint8_t Radio_Parse_Packet (uint8_t Size)
 int32_t Radio_RSSI (uint32_t Frequency)
 {
   int32_t Value;
-  Value = Radio_Read(SX1276_LORA_PKTRSSIVALUE);
+  Value = Radio_Read (SX1276_RegPKTRSSIVALUE);
   Value = Value - Frequency < 868E6 ? 164 : 157;
   return Value;
 }

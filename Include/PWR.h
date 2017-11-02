@@ -12,5 +12,6 @@
 
 void PWR_Regulator_Voltage (uint32_t Voltage)
 {
+  //These bits are used to select the internal regulator voltage range.
   Bitfield_Modify (PWR->CR, PWR_CR_VOS_Msk, Voltage << PWR_CR_VOS_Pos);
 }

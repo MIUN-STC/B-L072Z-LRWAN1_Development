@@ -1,89 +1,89 @@
 //SX1276 API
 
 
-#define SX1276_LORA_FIFO                                 0x00
+#define SX1276_RegFIFO                                 0x00
 
 
 // Common settings
-#define SX1276_LORA_OPMODE                               0x01
-#define SX1276_LORA_FRFMSB                               0x06
-#define SX1276_LORA_FRFMID                               0x07
-#define SX1276_LORA_FRFLSB                               0x08
+#define SX1276_RegOPMODE                               0x01
+#define SX1276_RegFRFMSB                               0x06
+#define SX1276_RegFRFMID                               0x07
+#define SX1276_RegFRFLSB                               0x08
 
 
 // Tx settings
-#define SX1276_LORA_PACONFIG                             0x09
-#define SX1276_LORA_PARAMP                               0x0A
-#define SX1276_LORA_OCP                                  0x0B
+#define SX1276_RegPACONFIG                             0x09
+#define SX1276_RegPARAMP                               0x0A
+#define SX1276_RegOCP                                  0x0B
 
 
 // Rx settings
-#define SX1276_LORA_LNA                                  0x0C
+#define SX1276_RegLNA                                  0x0C
 
 
 // LoRa registers
-#define SX1276_LORA_FIFOADDRPTR                          0x0D
-#define SX1276_LORA_FIFOTXBASEADDR                       0x0E
-#define SX1276_LORA_FIFORXBASEADDR                       0x0F
-#define SX1276_LORA_FIFORXCURRENTADDR                    0x10
-#define SX1276_LORA_IRQFLAGSMASK                         0x11
-#define SX1276_LORA_IRQFLAGS                             0x12
-#define SX1276_LORA_RXNBBYTES                            0x13
-#define SX1276_LORA_RXHEADERCNTVALUEMSB                  0x14
-#define SX1276_LORA_RXHEADERCNTVALUELSB                  0x15
-#define SX1276_LORA_RXPACKETCNTVALUEMSB                  0x16
-#define SX1276_LORA_RXPACKETCNTVALUELSB                  0x17
-#define SX1276_LORA_MODEMSTAT                            0x18
-#define SX1276_LORA_PKTSNRVALUE                          0x19
-#define SX1276_LORA_PKTRSSIVALUE                         0x1A
-#define SX1276_LORA_RSSIVALUE                            0x1B
-#define SX1276_LORA_HOPCHANNEL                           0x1C
-#define SX1276_LORA_MODEMCONFIG1                         0x1D
-#define SX1276_LORA_MODEMCONFIG2                         0x1E
-#define SX1276_LORA_SYMBTIMEOUTLSB                       0x1F
-#define SX1276_LORA_PREAMBLEMSB                          0x20
-#define SX1276_LORA_PREAMBLELSB                          0x21
-#define SX1276_LORA_PAYLOADLENGTH                        0x22
-#define SX1276_LORA_PAYLOADMAXLENGTH                     0x23
-#define SX1276_LORA_HOPPERIOD                            0x24
-#define SX1276_LORA_FIFORXBYTEADDR                       0x25
-#define SX1276_LORA_MODEMCONFIG3                         0x26
-#define SX1276_LORA_FEIMSB                               0x28
-#define SX1276_LORA_FEIMID                               0x29
-#define SX1276_LORA_FEILSB                               0x2A
-#define SX1276_LORA_RSSIWIDEBAND                         0x2C
-#define SX1276_LORA_TEST2F                               0x2F
-#define SX1276_LORA_TEST30                               0x30
-#define SX1276_LORA_DETECTOPTIMIZE                       0x31
-#define SX1276_LORA_INVERTIQ                             0x33
-#define SX1276_LORA_TEST36                               0x36
-#define SX1276_LORA_DETECTIONTHRESHOLD                   0x37
-#define SX1276_LORA_SYNCWORD                             0x39
-#define SX1276_LORA_TEST3A                               0x3A
-#define SX1276_LORA_INVERTIQ2                            0x3B
+#define SX1276_RegFIFOADDRPTR                          0x0D
+#define SX1276_RegFIFOTXBASEADDR                       0x0E
+#define SX1276_RegFIFORXBASEADDR                       0x0F
+#define SX1276_RegFIFORXCURRENTADDR                    0x10
+#define SX1276_RegIRQFLAGSMASK                         0x11
+#define SX1276_RegIRQFLAGS                             0x12
+#define SX1276_RegRXNBBYTES                            0x13
+#define SX1276_RegRXHEADERCNTVALUEMSB                  0x14
+#define SX1276_RegRXHEADERCNTVALUELSB                  0x15
+#define SX1276_RegRXPACKETCNTVALUEMSB                  0x16
+#define SX1276_RegRXPACKETCNTVALUELSB                  0x17
+#define SX1276_RegMODEMSTAT                            0x18
+#define SX1276_RegPKTSNRVALUE                          0x19
+#define SX1276_RegPKTRSSIVALUE                         0x1A
+#define SX1276_RegRSSIVALUE                            0x1B
+#define SX1276_RegHOPCHANNEL                           0x1C
+#define SX1276_RegMODEMCONFIG1                         0x1D
+#define SX1276_RegMODEMCONFIG2                         0x1E
+#define SX1276_RegSYMBTIMEOUTLSB                       0x1F
+#define SX1276_RegPREAMBLEMSB                          0x20
+#define SX1276_RegPREAMBLELSB                          0x21
+#define SX1276_RegPAYLOADLENGTH                        0x22
+#define SX1276_RegPAYLOADMAXLENGTH                     0x23
+#define SX1276_RegHOPPERIOD                            0x24
+#define SX1276_RegFIFORXBYTEADDR                       0x25
+#define SX1276_RegMODEMCONFIG3                         0x26
+#define SX1276_RegFEIMSB                               0x28
+#define SX1276_RegFEIMID                               0x29
+#define SX1276_RegFEILSB                               0x2A
+#define SX1276_RegRSSIWIDEBAND                         0x2C
+#define SX1276_RegTEST2F                               0x2F
+#define SX1276_RegTEST30                               0x30
+#define SX1276_RegDETECTOPTIMIZE                       0x31
+#define SX1276_RegINVERTIQ                             0x33
+#define SX1276_RegTEST36                               0x36
+#define SX1276_RegDETECTIONTHRESHOLD                   0x37
+#define SX1276_RegSYNCWORD                             0x39
+#define SX1276_RegTEST3A                               0x3A
+#define SX1276_RegINVERTIQ2                            0x3B
 
 
 // end of documented register in datasheet
 // I/O settings
-#define SX1276_LORA_DIOMAPPING1                          0x40
-#define SX1276_LORA_DIOMAPPING2                          0x41
+#define SX1276_RegDIOMAPPING1                          0x40
+#define SX1276_RegDIOMAPPING2                          0x41
 
 
 // Version
-#define SX1276_LORA_VERSION                              0x42
+#define SX1276_RegVERSION                              0x42
 
 
 // Additional settings
-#define SX1276_LORA_PLLHOP                               0x44
-#define SX1276_LORA_TCXO                                 0x4B
-#define SX1276_LORA_PADAC                                0x4D
-#define SX1276_LORA_FORMERTEMP                           0x5B
-#define SX1276_LORA_BITRATEFRAC                          0x5D
-#define SX1276_LORA_AGCREF                               0x61
-#define SX1276_LORA_AGCTHRESH1                           0x62
-#define SX1276_LORA_AGCTHRESH2                           0x63
-#define SX1276_LORA_AGCTHRESH3                           0x64
-#define SX1276_LORA_PLL                                  0x70
+#define SX1276_RegPLLHOP                               0x44
+#define SX1276_RegTCXO                                 0x4B
+#define SX1276_RegPADAC                                0x4D
+#define SX1276_RegFORMERTEMP                           0x5B
+#define SX1276_RegBITRATEFRAC                          0x5D
+#define SX1276_RegAGCREF                               0x61
+#define SX1276_RegAGCTHRESH1                           0x62
+#define SX1276_RegAGCTHRESH2                           0x63
+#define SX1276_RegAGCTHRESH3                           0x64
+#define SX1276_RegPLL                                  0x70
 
 
 //SX1276 LoRa bits control definition

@@ -1,3 +1,8 @@
+/*
+https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.html
+
+*/
+
 #include "stm32l072xx.h"
 #include "system_stm32l0xx.h"
 #include "utility.h"
@@ -25,14 +30,19 @@ void Print_Radio ()
 }
 
 
+
+
 int main(void)
 {
   Board_Init ();
 
+  Configure_RTC ();
+  Init_RTC (100000000);
+  
   USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
 
   //915 MHz
-  Radio_Init (915E6);
+  Radio_Init (868E6);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
   GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
@@ -44,13 +54,29 @@ int main(void)
   uint32_t Timeout = 0;
   while (1) 
   {
+
+    if(((RTC->ISR & RTC_ISR_RSF) == RTC_ISR_RSF))
+    {
+      RTC->DR; /* need to read date also */
+    }
+
     if (Timeout == 0)
     {
       GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
       GPIO_Pin_Clear (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);
       GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-      GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
+      //GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
       Timeout = 2000000;
+      
+      
+      uint8_t Length = Radio_Parse_Packet (0);
+      printf ("Length %i\n", (int)Length);
+      int RSSI; 
+      RSSI = Radio_RSSI (868E6);
+      printf ("RSSI %i\n", (int)RSSI);
+      
+      
+      
     }
     else if (Timeout == 1000000)
     {
@@ -60,6 +86,11 @@ int main(void)
       if (Timeon_LD4_RED > 0) {GPIO_Pin_Set (LED_LD4_RED_PORT, LED_LD4_RED_PIN);Timeon_LD4_RED--;}
     }
     Timeout--;
+    
+
+
+
+    
   }
 }
 
