@@ -27,7 +27,23 @@ void RTC_Lock ()
 }
 
 
-void RTC_Wakeup_Timer_Blocking (uint16_t Value)
+void RTC_Calendar_Stop_Blocking ()
+{
+  RTC->ISR = RTC_ISR_INIT;
+  while ((RTC->ISR & RTC_ISR_INITF) != RTC_ISR_INITF) {}
+}
+
+
+void RTC_Calendar_Run ()
+{
+  RTC->ISR =~ RTC_ISR_INIT;
+}
+
+
+
+
+
+void RTC_Wakeup_Update_Blocking (uint16_t Value)
 {
   //Write access for RTC regsiters
   RTC_Unlock ();
@@ -41,9 +57,9 @@ void RTC_Wakeup_Timer_Blocking (uint16_t Value)
   //This register can be written only when RTC_ISR_WUTWF is set to 1 in RTC_ISR.
   //Modify wake upvalue reload counter to have a wake up each 1Hz
   RTC->WUTR = Value;
-
+  
   //Enable wake up counter and wake up interrupt
-  RTC->CR = RTC_CR_WUTE | RTC_CR_WUTIE;
+  RTC->CR = RTC_CR_WUTE | RTC_CR_WUTIE | (1 << RTC_CR_WUCKSEL_Pos);
 
   //Disable write access
   RTC_Lock ();
@@ -66,7 +82,9 @@ __INLINE static void Configure_RTC(void)
   RCC->APB1ENR &=~ RCC_APB1ENR_PWREN;
 
   //Modify wake upvalue reload counter to have a wake up each 1Hz
-  RTC_Wakeup_Timer_Blocking (0x9C0);
+  //RTC_WUTR
+  //RTC_Wakeup_Update_Blocking (0x9C0);
+  RTC_Wakeup_Update_Blocking (0x69C0);
   
   EXTI->IMR |= EXTI_IMR_IM20;
   EXTI->RTSR |= EXTI_RTSR_TR20;
@@ -74,31 +92,16 @@ __INLINE static void Configure_RTC(void)
   NVIC_EnableIRQ (RTC_IRQn);
 }
 
-/**
-  * Brief   This function configures RTC.
-  * Param   uint32_t New time
-  * Retval  None
-  */
-__INLINE void Init_RTC(uint32_t Time)
+
+__INLINE void RTC_Calender_Update (uint32_t Time)
 {
-  /* RTC init mode */
-  /* Configure RTC */
-  /* (1) Write access for RTC registers */
-  /* (2) Enable init phase */
-  /* (3) Wait until it is allow to modify RTC register values */
-  /* (4) set prescaler, 40kHz/64 => 625 Hz, 625Hz/625 => 1Hz */
-  /* (5) New time in TR */
-  /* (6) Disable init phase */
-  /* (7) Disable write access for RTC registers */
   RTC_Unlock ();
-  RTC->ISR = RTC_ISR_INIT; /* (2) */
-  while((RTC->ISR & RTC_ISR_INITF)!=RTC_ISR_INITF) {}
-  RTC->PRER = 0x003F0270; /* (4) */
-  RTC->TR = RTC_TR_PM | Time; /* (5) */
-  RTC->ISR =~ RTC_ISR_INIT; /* (6) */
+  RTC_Calendar_Stop_Blocking ();
+  
+  //set prescaler, 40kHz/64 => 625 Hz, 625Hz/625 => 1Hz
+  RTC->PRER = 0x003F0270;
+  RTC->TR = RTC_TR_PM | Time;
+  
+  RTC_Calendar_Run ();
   RTC_Lock ();
 }
-
-
-
-

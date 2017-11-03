@@ -102,3 +102,4 @@ void GPIO_Alternate_Function (GPIO_TypeDef * GPIOx, uint32_t Pin, uint32_t AF)
   //(AF << Pos) : Value mask
   Bitfield_Modify (GPIOA->AFR[Pin >> 3], 0xF << ((Pin & 0x7) * 4), AF << ((Pin & 0x7) * 4));
 }
+

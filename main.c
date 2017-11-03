@@ -39,17 +39,17 @@ int main(void)
 
   RCC_Enable_LSI_Blocking ();
   Configure_RTC ();
-  Init_RTC (100000000);
+  RTC_Calender_Update (100000000);
   
   USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
 
   //915 MHz
-  Radio_Init (868E6);
+  Radio_Init (868100000);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
-  GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
-  Delay1 (1000);
   GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
+  Delay1 (1000);
+  GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
   Delay1 (1000);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Loop main\r\n");
@@ -70,8 +70,11 @@ int main(void)
       //GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
       Timeout = 2000000;
       
+      Radio_Enable_Explicit_Header ();
+      Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
       
-      uint8_t Length = Radio_Parse_Packet (0);
+      Radio_Write (SX1276_RegFIFOADDRPTR, 0);
+      uint8_t Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
       printf ("Length %i\n", (int)Length);
       int RSSI; 
       RSSI = Radio_RSSI (868E6);
@@ -99,6 +102,8 @@ int main(void)
 
 void USART2_IRQHandler(void)
 {
+  int R;
+  char Send_Buffer [] = "Hello\n";
   /*
   if((USART2->ISR & USART_ISR_TC) == USART_ISR_TC)
   {
@@ -122,6 +127,12 @@ void USART2_IRQHandler(void)
         Board_Enter_Standby ();
         break;
         
+        
+      case 't':
+      R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
+      printf ("Radio_Send: %i\n", R);
+      break;
+      
       default: 
         break;
     }

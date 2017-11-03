@@ -264,7 +264,8 @@ void Radio_Init (uint32_t Frequency)
   GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_MODE);
   GPIO_Pin_Pull (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_PULL);
   GPIO_Pin_Speed (RADIO_RESET_PORT, RADIO_RESET_PIN, RADIO_RESET_SPEED);
-  GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
+  //GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
+  GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
 
   GPIO_Pin_Mode (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_MODE);
   GPIO_Pin_Pull (RADIO_MOSI_PORT, RADIO_MOSI_PIN, RADIO_MOSI_PULL);
@@ -329,7 +330,7 @@ void Radio_Init (uint32_t Frequency)
 }
 
 
-void Radio_Header_Implicit ()
+void Radio_Enable_Implicit_Header ()
 {
   uint8_t Value;
   Value = Radio_Read (SX1276_RegMODEMCONFIG1);
@@ -338,8 +339,20 @@ void Radio_Header_Implicit ()
 }
 
 
-void Radio_Send (uint8_t * Data, uint8_t Count)
+void Radio_Enable_Explicit_Header ()
 {
+  uint8_t Value;
+  Value = Radio_Read (SX1276_RegMODEMCONFIG1);
+  Value &= RFLR_MODEMCONFIG1_IMPLICITHEADER_MASK;
+  Radio_Write (SX1276_RegMODEMCONFIG1, Value);
+}
+
+
+int Radio_Send (uint8_t * Data, uint8_t Count)
+{
+  int R = 0;
+  Radio_Enable_Explicit_Header ();
+  
   Radio_Write (SX1276_RegFIFOADDRPTR, 0);
   Radio_Write (SX1276_RegPAYLOADLENGTH, 0);
   //int Length;
@@ -354,10 +367,11 @@ void Radio_Send (uint8_t * Data, uint8_t Count)
   Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done
-  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0);
+  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0) {R++;}
 
   // clear IRQ's
   Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
+  return R;
 }
 
 
@@ -373,14 +387,12 @@ uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
 }
 
 
-uint8_t Radio_Parse_Packet (uint8_t Size)
+uint8_t Radio_Parse_Packet ()
 {
   uint8_t Length = 0;
   uint8_t irqFlags = Radio_Read (SX1276_RegIRQFLAGS);
 
-  Radio_Header_Implicit ();
-
-  Radio_Write (SX1276_RegPAYLOADLENGTH, Size);
+  Radio_Enable_Explicit_Header ();
 
   Radio_Write (SX1276_RegIRQFLAGS, irqFlags);
 
