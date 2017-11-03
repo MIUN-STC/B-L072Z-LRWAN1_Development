@@ -9,6 +9,7 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 #include "sx1276.h"
 #include "Board.h"
 #include "Radio.h"
+#include "RCC.h"
 #include <stdio.h>
 
 uint32_t Timeon_LD1_GREEN = 0;
@@ -36,6 +37,7 @@ int main(void)
 {
   Board_Init ();
 
+  RCC_Enable_LSI_Blocking ();
   Configure_RTC ();
   Init_RTC (100000000);
   
