@@ -12,10 +12,7 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 #include "RCC.h"
 #include <stdio.h>
 
-uint32_t Timeon_LD1_GREEN = 0;
-uint32_t Timeon_LD2_GREEN = 0;
-uint32_t Timeon_LD3_BLUE = 0;
-uint32_t Timeon_LD4_RED = 0;
+
 
 
 void Print_Radio ()
@@ -31,10 +28,17 @@ void Print_Radio ()
 }
 
 
-
+#define APP_MODE_IDLE 0
+#define APP_MODE_RECEIVE0 1
+#define APP_MODE_RECEIVE1 2
+#define APP_MODE_RECEIVE2 3
+#define APP_MODE_TRANSMIT 4
+int App_Mode = APP_MODE_IDLE;
 
 int main(void)
 {
+
+
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN | RCC_IOPENR_IOPCEN;
 
@@ -68,49 +72,58 @@ int main(void)
   Delay1 (1000);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Loop main\r\n");
-  uint32_t Timeout = 0;
+
+  uint8_t Result = 0;
+  int RSSI; 
+  uint8_t Status = 0;
+
   while (1) 
   {
 
-    if(((RTC->ISR & RTC_ISR_RSF) == RTC_ISR_RSF))
+    switch (App_Mode)
     {
-      RTC->DR; /* need to read date also */
+      case APP_MODE_IDLE:
+        GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (1000);
+        GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (1000);
+        break;
+
+      case APP_MODE_RECEIVE0:
+        //Radio_Enable_Implicit_Header ();
+        Radio_Enable_Explicit_Header ();
+        Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
+        App_Mode = APP_MODE_RECEIVE1;
+        break;
+
+      case APP_MODE_RECEIVE1:
+        Status = Radio_Read (SX1276_RegMODEMSTAT);
+        if (Status != 0x10)
+        {
+          App_Mode = APP_MODE_RECEIVE2;
+        }
+        /*
+        Result = Radio_Read (SX1276_RegIRQFLAGS);
+        if (Result & (RFLR_IRQFLAGS_RXDONE | RFLR_IRQFLAGS_RXTIMEOUT))
+        {
+          Radio_Write (SX1276_RegIRQFLAGS, 0);
+          App_Mode = APP_MODE_RECEIVE2;
+        }*/
+        break;
+
+      case APP_MODE_RECEIVE2:
+        printf ("Status     %x\n", Status);
+        printf ("SX1276_RegIRQFLAGS      %x\n", Result);
+        printf ("RFLR_IRQFLAGS_RXDONE    %x\n", Result & RFLR_IRQFLAGS_RXDONE);
+        printf ("RFLR_IRQFLAGS_RXTIMEOUT %x\n", Result & RFLR_IRQFLAGS_RXTIMEOUT);
+        //Radio_Write (SX1276_RegFIFOADDRPTR, 0);
+        uint8_t Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
+        printf ("Length %i\n", (int)Length);
+        RSSI = Radio_RSSI (868E6);
+        printf ("RSSI %i\n", (int)RSSI);
+        App_Mode = APP_MODE_IDLE;
+        break;
     }
-
-    if (Timeout == 0)
-    {
-      GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-      GPIO_Pin_Clear (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);
-      GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-      //GPIO_Pin_Clear (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
-      Timeout = 2000000;
-      
-      Radio_Enable_Explicit_Header ();
-      Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
-      
-      Radio_Write (SX1276_RegFIFOADDRPTR, 0);
-      uint8_t Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
-      printf ("Length %i\n", (int)Length);
-      int RSSI; 
-      RSSI = Radio_RSSI (868E6);
-      printf ("RSSI %i\n", (int)RSSI);
-      
-      
-      
-    }
-    else if (Timeout == 1000000)
-    {
-      GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-      if (Timeon_LD1_GREEN > 0) {GPIO_Pin_Set (LED_LD1_GREEN_PORT, LED_LD1_GREEN_PIN);Timeon_LD1_GREEN--;}
-      if (Timeon_LD3_BLUE > 0) {GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);Timeon_LD3_BLUE--;}
-      if (Timeon_LD4_RED > 0) {GPIO_Pin_Set (LED_LD4_RED_PORT, LED_LD4_RED_PIN);Timeon_LD4_RED--;}
-    }
-    Timeout--;
-    
-
-
-
-    
   }
 }
 
@@ -133,20 +146,21 @@ void USART2_IRQHandler(void)
     switch(Data)
     {
       case 'b':
-      case 'B': 
         GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         break;
       
-      case 'r':
-      case 'R': 
+      case 's': 
         Board_Enter_Standby ();
         break;
-        
+
+      case 'r': 
+        App_Mode = APP_MODE_RECEIVE0;
+        break;
         
       case 't':
-      R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
-      printf ("Radio_Send: %i\n", R);
-      break;
+        R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
+        printf ("Radio_Send: %i\n", R);
+        break;
       
       default: 
         break;
@@ -157,8 +171,6 @@ void USART2_IRQHandler(void)
 
 void Board_Button ()
 {
-  Timeon_LD1_GREEN++;
-  
   if ((SPI1->SR & SPI_SR_TXE) == SPI_SR_TXE)
   {
     Print_Radio ();
