@@ -35,16 +35,31 @@ void Print_Radio ()
 
 int main(void)
 {
-  Board_Init ();
+  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+  RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN | RCC_IOPENR_IOPCEN;
+
+  //At this stage the microcontroller clock setting is already configured,
+  //this is done through SystemInit() function which is called from
+  //startup file (startup_stm32l0xx.s) before to branch to application main.
+  //To reconfigure the default setting of SystemInit() function, refer to system_stm32l0xx.c file 1ms config
+  SysTick_Config(2000);
+  SystemClock_Config();
+  //if (error != 0) {while(1) {}}
+  //1ms config
+  //SysTick_Config(16000);
+  //init_clock_r ();
+  //RCC->CFGR &= (uint32_t) RCC_CFGR_MCOSEL;
+  //RCC->CFGR |= RCC_CFGR_MCO_SYSCLK | RCC_CFGR_MCO_PRE_4;
+
 
   RCC_Enable_LSI_Blocking ();
   Configure_RTC ();
   RTC_Calender_Update (100000000);
-  
-  USART_Transmit_CString_Blocking (STLINK_USART, "Board_Init\r\n");
 
-  //915 MHz
-  Radio_Init (868100000);
+
+  Board_Init ();
+  Radio_Init (868100000); //Hz
+  
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
   GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);

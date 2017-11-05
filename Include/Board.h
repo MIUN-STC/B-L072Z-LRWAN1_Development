@@ -161,21 +161,7 @@ __STATIC_INLINE void SystemClock_Config(void)
 
 void Board_Init ()
 {
-  //At this stage the microcontroller clock setting is already configured,
-  //this is done through SystemInit() function which is called from
-  //startup file (startup_stm32l0xx.s) before to branch to application main.
-  //To reconfigure the default setting of SystemInit() function, refer to system_stm32l0xx.c file 1ms config
-  SysTick_Config(2000);
-  SystemClock_Config();
-  //if (error != 0) {while(1) {}}
-  //1ms config
-  //SysTick_Config(16000);
-  
-  //init_clock_r ();
-  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-  RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
-  //RCC->CFGR &= (uint32_t) RCC_CFGR_MCOSEL;
-  //RCC->CFGR |= RCC_CFGR_MCO_SYSCLK | RCC_CFGR_MCO_PRE_4;
+
   Bitfield_Modify (RCC->CFGR, RCC_CFGR_MCOSEL_Msk, RCC_CFGR_MCOSEL_MSI);
   Bitfield_Modify (RCC->CFGR, RCC_CFGR_MCOPRE_Msk, RCC_CFGR_MCOPRE_DIV1);
   GPIO_Pin_Mode (GPIOB, 13, GPIO_MODE_AF_PP);
