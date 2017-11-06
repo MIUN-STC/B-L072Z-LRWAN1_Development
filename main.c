@@ -31,10 +31,11 @@ void Print_Radio ()
 #define APP_MODE_IDLE 0
 #define APP_MODE_LISTEN0 1
 #define APP_MODE_LISTEN1 2
-#define APP_MODE_INFO 3
-#define APP_MODE_RECEIVE3 4
-#define APP_MODE_TRANSMIT0 6
-#define APP_MODE_TRANSMIT1 7
+#define APP_MODE_LISTEN2 3
+#define APP_MODE_INFO 10
+#define APP_MODE_RECEIVE3 20
+#define APP_MODE_TRANSMIT0 30
+#define APP_MODE_TRANSMIT1 31
 int App_Mode = APP_MODE_IDLE;
 int X = 0;
 
@@ -92,7 +93,7 @@ int main(void)
         //Radio_Enable_Implicit_Header ();
         Radio_Enable_Explicit_Header ();
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
-        App_Mode = APP_MODE_LISTEN1;
+        App_Mode = APP_MODE_IDLE;
         break;
       
       case APP_MODE_LISTEN1:
@@ -110,6 +111,21 @@ int main(void)
         break;
       }
       
+      case APP_MODE_LISTEN2:
+      {
+        uint8_t Flag;
+        char Buffer [255];
+        Flag = Radio_Read (SX1276_RegIRQFLAGS);
+        if (Flag & RFLR_IRQFLAGS_RXDONE)
+        {
+          Radio_Receive ((uint8_t *)Buffer, 255);
+          printf ("Buffer : %s\n", Buffer);
+          printf ("RSSI   : %i\n", (int)Radio_RSSI (868100000));
+          Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
+        }
+        App_Mode = APP_MODE_IDLE;
+        break;
+      }
 
       
       case APP_MODE_INFO:
@@ -214,3 +230,14 @@ void Board_Button ()
   }
 }
 
+
+void EXTI4_15_IRQHandler ()
+{
+  if((EXTI->PR & (1 << RADIO_DIO0_PIN)) == (1 << RADIO_DIO0_PIN))
+  {
+    //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
+    EXTI->PR = (1 << RADIO_DIO0_PIN);
+  }
+  App_Mode = APP_MODE_LISTEN2;
+  //printf ("EXTI4_15!\n");
+}
