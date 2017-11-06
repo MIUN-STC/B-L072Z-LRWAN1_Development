@@ -331,6 +331,7 @@ void Radio_Init (uint32_t Frequency)
 
   Radio_Set_Carrier_Frequency (Frequency);
 
+  Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
   //write base address in FIFO data buffer for TX modulator
   Radio_Write (SX1276_RegFIFOTXBASEADDR, 0);
   //read base address in FIFO data buffer for RX demodulator
@@ -365,6 +366,7 @@ void Radio_Enable_Implicit_Header ()
   Value = Radio_Read (SX1276_RegMODEMCONFIG1);
   Value |= RFLR_MODEMCONFIG1_IMPLICITHEADER_ON;
   Radio_Write (SX1276_RegMODEMCONFIG1, Value);
+  //printf ("SX1276_RegMODEMCONFIG1 %x\n", Value);
 }
 
 
@@ -374,6 +376,7 @@ void Radio_Enable_Explicit_Header ()
   Value = Radio_Read (SX1276_RegMODEMCONFIG1);
   Value &= RFLR_MODEMCONFIG1_IMPLICITHEADER_MASK;
   Radio_Write (SX1276_RegMODEMCONFIG1, Value);
+  //printf ("SX1276_RegMODEMCONFIG1 %x\n", Value);
 }
 
 
@@ -382,8 +385,8 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
   int R = 0;
   Radio_Enable_Explicit_Header ();
   
-  Radio_Write (SX1276_RegFIFOADDRPTR, 0);
-  Radio_Write (SX1276_RegPAYLOADLENGTH, 0);
+  Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
+  Radio_Write (SX1276_RegPAYLOADLENGTH, Count);
   //int Length;
   //Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
   for (int I = 0; I < Count; I = I + 1)
@@ -407,11 +410,16 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
 uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
 {
   uint8_t Length;
+  uint8_t P;
+  P = Radio_Read (SX1276_RegFIFORXCURRENTADDR);
+  Radio_Write (SX1276_RegFIFOADDRPTR, P);
   Length = Radio_Read (SX1276_RegRXNBBYTES);
   for (uint8_t I = 0; I < Length; I = I + 1)
   {
     Data [I] = Radio_Read (SX1276_RegFIFO);
   }
+  //Radio_Write (SX1276_RegFIFORXCURRENTADDR, 0x00);
+  
   return Length;
 }
 

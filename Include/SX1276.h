@@ -112,7 +112,7 @@
 // LoRa specific modes
 #define RFLR_OPMODE_RECEIVER_SINGLE                 0x06
 #define RFLR_OPMODE_CAD                             0x07
-
+#define RFLR_OPMODE_RXCONTINUOUS                    0x05
 
 // RegFrf (MHz)
 #define RFLR_FRFMSB_434_MHZ                         0x6C // Default

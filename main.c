@@ -92,24 +92,34 @@ int main(void)
       case APP_MODE_RECEIVE0:
         //Radio_Enable_Implicit_Header ();
         Radio_Enable_Explicit_Header ();
-        Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
-        App_Mode = APP_MODE_RECEIVE1;
+        Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
+        App_Mode = APP_MODE_IDLE;
         break;
 
       case APP_MODE_RECEIVE1:
-        Status = Radio_Read (SX1276_RegMODEMSTAT);
-        if (Status != 0x10)
-        {
-          App_Mode = APP_MODE_RECEIVE2;
-        }
-        /*
-        Result = Radio_Read (SX1276_RegIRQFLAGS);
-        if (Result & (RFLR_IRQFLAGS_RXDONE | RFLR_IRQFLAGS_RXTIMEOUT))
-        {
-          Radio_Write (SX1276_RegIRQFLAGS, 0);
-          App_Mode = APP_MODE_RECEIVE2;
-        }*/
+      {
+        uint8_t MODEMSTAT;
+        uint8_t IRQFLAGS;
+        uint8_t RXNBBYTES;
+        uint8_t FIFORXBASEADDR;
+        uint8_t FIFORXCURRENTADDR;
+        char Buffer [256];
+        MODEMSTAT = Radio_Read (SX1276_RegMODEMSTAT);
+        IRQFLAGS = Radio_Read (SX1276_RegIRQFLAGS);
+        RXNBBYTES = Radio_Read (SX1276_RegRXNBBYTES);
+        FIFORXBASEADDR = Radio_Read (SX1276_RegFIFORXBASEADDR);
+        FIFORXCURRENTADDR = Radio_Read (SX1276_RegFIFORXCURRENTADDR);
+        Radio_Receive ((uint8_t *)Buffer, 255);
+        printf ("SX1276_RegMODEMSTAT      %x\n", MODEMSTAT);
+        printf ("SX1276_RegIRQFLAGS       %x\n", IRQFLAGS);
+        printf ("SX1276_RegRXNBBYTES      %x\n", RXNBBYTES);
+        printf ("SX1276_RegFIFORXBASEADDR %x\n", FIFORXBASEADDR);
+        printf ("RegFIFORXCURRENTADDR     %x\n", FIFORXCURRENTADDR);
+        printf ("Buffer                   %s\n", Buffer);
+        Radio_Write (SX1276_RegIRQFLAGS, 0x01);
+        App_Mode = APP_MODE_IDLE;
         break;
+      }
 
       case APP_MODE_RECEIVE2:
         printf ("Status     %x\n", Status);
@@ -127,11 +137,12 @@ int main(void)
   }
 }
 
+int X = 0;
 
 void USART2_IRQHandler(void)
 {
   int R;
-  char Send_Buffer [] = "Hello\n";
+  char Send_Buffer [20];
   /*
   if((USART2->ISR & USART_ISR_TC) == USART_ISR_TC)
   {
@@ -158,8 +169,21 @@ void USART2_IRQHandler(void)
         break;
         
       case 't':
+        sprintf (Send_Buffer, "Hello %i\n", X++);
         R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
         printf ("Radio_Send: %i\n", R);
+        break;
+        
+      case 'i':
+        App_Mode = APP_MODE_RECEIVE1;
+        /*
+        Info = Radio_Read (SX1276_RegFIFOADDRPTR);
+        printf ("SX1276_RegFIFOADDRPTR     %x\n", Info);
+        Info = Radio_Read (SX1276_RegPAYLOADLENGTH);
+        printf ("SX1276_RegPAYLOADLENGTH   %x\n", Info);
+        Info = Radio_Read (SX1276_RegFIFOTXBASEADDR);
+        printf ("SX1276_RegFIFOTXBASEADDR  %x\n", Info);
+        */
         break;
       
       default: 
