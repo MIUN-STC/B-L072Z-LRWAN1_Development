@@ -29,11 +29,14 @@ void Print_Radio ()
 
 
 #define APP_MODE_IDLE 0
-#define APP_MODE_RECEIVE0 1
-#define APP_MODE_RECEIVE1 2
-#define APP_MODE_RECEIVE2 3
-#define APP_MODE_TRANSMIT 4
+#define APP_MODE_LISTEN0 1
+#define APP_MODE_LISTEN1 2
+#define APP_MODE_INFO 3
+#define APP_MODE_RECEIVE3 4
+#define APP_MODE_TRANSMIT0 6
+#define APP_MODE_TRANSMIT1 7
 int App_Mode = APP_MODE_IDLE;
+int X = 0;
 
 int main(void)
 {
@@ -72,11 +75,7 @@ int main(void)
   Delay1 (1000);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Loop main\r\n");
-
-  uint8_t Result = 0;
-  int RSSI; 
-  uint8_t Status = 0;
-
+  
   while (1) 
   {
 
@@ -88,15 +87,32 @@ int main(void)
         GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
         Delay1 (1000);
         break;
-
-      case APP_MODE_RECEIVE0:
+      
+      case APP_MODE_LISTEN0:
         //Radio_Enable_Implicit_Header ();
         Radio_Enable_Explicit_Header ();
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
-        App_Mode = APP_MODE_IDLE;
+        App_Mode = APP_MODE_LISTEN1;
         break;
+      
+      case APP_MODE_LISTEN1:
+      {
+        uint8_t Flag;
+        char Buffer [255];
+        Flag = Radio_Read (SX1276_RegIRQFLAGS);
+        if (Flag & RFLR_IRQFLAGS_RXDONE)
+        {
+          Radio_Receive ((uint8_t *)Buffer, 255);
+          printf ("Buffer : %s\n", Buffer);
+          printf ("RSSI   : %i\n", (int)Radio_RSSI (868100000));
+          Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
+        }
+        break;
+      }
+      
 
-      case APP_MODE_RECEIVE1:
+      
+      case APP_MODE_INFO:
       {
         uint8_t MODEMSTAT;
         uint8_t IRQFLAGS;
@@ -116,33 +132,37 @@ int main(void)
         printf ("SX1276_RegFIFORXBASEADDR %x\n", FIFORXBASEADDR);
         printf ("RegFIFORXCURRENTADDR     %x\n", FIFORXCURRENTADDR);
         printf ("Buffer                   %s\n", Buffer);
-        Radio_Write (SX1276_RegIRQFLAGS, 0x01);
+        Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         App_Mode = APP_MODE_IDLE;
         break;
       }
-
-      case APP_MODE_RECEIVE2:
-        printf ("Status     %x\n", Status);
-        printf ("SX1276_RegIRQFLAGS      %x\n", Result);
-        printf ("RFLR_IRQFLAGS_RXDONE    %x\n", Result & RFLR_IRQFLAGS_RXDONE);
-        printf ("RFLR_IRQFLAGS_RXTIMEOUT %x\n", Result & RFLR_IRQFLAGS_RXTIMEOUT);
-        //Radio_Write (SX1276_RegFIFOADDRPTR, 0);
-        uint8_t Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
-        printf ("Length %i\n", (int)Length);
-        RSSI = Radio_RSSI (868E6);
-        printf ("RSSI %i\n", (int)RSSI);
+      
+      case APP_MODE_TRANSMIT0:
+      {
+        App_Mode = APP_MODE_TRANSMIT1;
+        break;
+      }
+      
+      case APP_MODE_TRANSMIT1:
+      {
+        int R;
+        char Send_Buffer [20];
+        sprintf (Send_Buffer, "World %i", X++);
+        R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
+        printf ("Radio_Send: %i\n", R);
         App_Mode = APP_MODE_IDLE;
         break;
+      }
+      
+      
     }
   }
 }
 
-int X = 0;
+
 
 void USART2_IRQHandler(void)
 {
-  int R;
-  char Send_Buffer [20];
   /*
   if((USART2->ISR & USART_ISR_TC) == USART_ISR_TC)
   {
@@ -163,27 +183,20 @@ void USART2_IRQHandler(void)
       case 's': 
         Board_Enter_Standby ();
         break;
-
-      case 'r': 
-        App_Mode = APP_MODE_RECEIVE0;
+        
+      case 'i':
+        App_Mode = APP_MODE_INFO;
         break;
         
       case 't':
-        sprintf (Send_Buffer, "Hello %i\n", X++);
-        R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
-        printf ("Radio_Send: %i\n", R);
+        if (App_Mode == APP_MODE_IDLE)
+        {
+          App_Mode = APP_MODE_TRANSMIT0;
+        }
         break;
-        
-      case 'i':
-        App_Mode = APP_MODE_RECEIVE1;
-        /*
-        Info = Radio_Read (SX1276_RegFIFOADDRPTR);
-        printf ("SX1276_RegFIFOADDRPTR     %x\n", Info);
-        Info = Radio_Read (SX1276_RegPAYLOADLENGTH);
-        printf ("SX1276_RegPAYLOADLENGTH   %x\n", Info);
-        Info = Radio_Read (SX1276_RegFIFOTXBASEADDR);
-        printf ("SX1276_RegFIFOTXBASEADDR  %x\n", Info);
-        */
+      
+      case 'l':
+        App_Mode = APP_MODE_LISTEN0;
         break;
       
       default: 

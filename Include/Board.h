@@ -328,7 +328,7 @@ void RTC_IRQHandler(void)
     EXTI->PR = EXTI_PR_PR20; /* clear exti line 20 flag */
     //GPIOB->ODR ^= (1 << 4) ; /* Toggle Green LED */
     GPIO_Pin_Toggle (LED_LD4_RED_PORT, LED_LD4_RED_PIN);
-    printf ("RTC_IRQHandler\n");
+    //printf ("RTC_IRQHandler\n");
   }
 }
 

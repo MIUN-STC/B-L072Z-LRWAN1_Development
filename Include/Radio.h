@@ -399,7 +399,7 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
   Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done
-  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0) {R++;}
+  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0 && (R < 10000)) {R++;}
 
   // clear IRQ's
   Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
@@ -457,10 +457,10 @@ uint8_t Radio_Parse_Packet ()
 }
 
 
-int32_t Radio_RSSI (uint32_t Frequency)
+int Radio_RSSI (uint32_t Frequency)
 {
-  int32_t Value;
+  int Value;
   Value = Radio_Read (SX1276_RegPKTRSSIVALUE);
-  Value = Value - Frequency < 868E6 ? 164 : 157;
+  Value = Value - (Frequency < 868E6 ? 164 : 157);
   return Value;
 }
