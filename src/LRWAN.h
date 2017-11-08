@@ -1,6 +1,7 @@
 #pragma once
 
-#include "aes.h"
+#include <stdint.h>
+#include "samtech/LoraMacCrypto.h"
 
 //https://hackmd.io/s/S1kg6Ymo-#
 
@@ -33,7 +34,8 @@ LRWAN_Frame_Join_Request
   uint8_t AppEUI [8];
   uint8_t DevEUI [8];
   uint8_t DevNonce [2];
-  uint8_t MIC [4];
+  //4
+  uint8_t MIC [16];
 };
 
 
@@ -48,14 +50,30 @@ LRWAN_Frame_Join_Accept
   uint8_t RXDelay [1];
   //0 or 16 bytes.
   uint8_t CFList [16];
-  uint8_t MIC [4];
+  //4
+  uint8_t MIC [16];
 };
 
-void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t Key [16])
+
+static void reverse (void * start, int size)
+{
+    unsigned char *lo = start;
+    unsigned char *hi = start + size - 1;
+    unsigned char swap;
+    while (lo < hi) {
+        swap = *lo;
+        *lo++ = *hi;
+        *hi-- = swap;
+    }
+}
+
+void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16])
 {
   uint8_t const Size = 19;
-  uint8_t const * Data = (uint8_t *) Frame;
-  AES_ECB_encrypt (Data, Key, Frame->MIC, Size);
+  uint8_t const * Data = (uint8_t const *) Frame;
+  reverse (Frame->AppEUI, 8);
+  reverse (Frame->DevEUI, 8);
+  LoRaMacJoinComputeMic (Data, Size, Key, Frame->MIC);
 }
 
 

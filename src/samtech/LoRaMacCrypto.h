@@ -1,40 +1,6 @@
-/*!
- * \file      LoRaMacCrypto.h
- *
- * \brief     LoRa MAC layer cryptography implementation
- *
- * \copyright Revised BSD License, see section \ref LICENSE.
- *
- * \code
- *                ______                              _
- *               / _____)             _              | |
- *              ( (____  _____ ____ _| |_ _____  ____| |__
- *               \____ \| ___ |    (_   _) ___ |/ ___)  _ \
- *               _____) ) ____| | | || |_| ____( (___| | | |
- *              (______/|_____)_|_|_| \__)_____)\____)_| |_|
- *              (C)2013 Semtech
- *
- *               ___ _____ _   ___ _  _____ ___  ___  ___ ___
- *              / __|_   _/_\ / __| |/ / __/ _ \| _ \/ __| __|
- *              \__ \ | |/ _ \ (__| ' <| _| (_) |   / (__| _|
- *              |___/ |_/_/ \_\___|_|\_\_| \___/|_|_\\___|___|
- *              embedded.connectivity.solutions===============
- *
- * \endcode
- *
- * \author    Miguel Luis ( Semtech )
- *
- * \author    Gregory Cristian ( Semtech )
- *
- * \author    Daniel Jaeckle ( STACKFORCE )
- *
- * \defgroup    LORAMAC_CRYPTO  LoRa MAC layer cryptography implementation
- *              This module covers the implementation of cryptographic functions
- *              of the LoRaMAC layer.
- * \{
- */
-#ifndef __LORAMAC_CRYPTO_H__
-#define __LORAMAC_CRYPTO_H__
+#pragma once
+
+#include <stdint.h>
 
 /*!
  * Computes the LoRaMAC frame MIC field
@@ -83,7 +49,7 @@ void LoRaMacPayloadDecrypt( const uint8_t *buffer, uint16_t size, const uint8_t 
  * \param [IN]  key             - AES key to be used
  * \param [OUT] mic             - Computed MIC field
  */
-void LoRaMacJoinComputeMic( const uint8_t *buffer, uint16_t size, const uint8_t *key, uint32_t *mic );
+void LoRaMacJoinComputeMic( const uint8_t *buffer, uint16_t size, const uint8_t *key, uint8_t mic [16] );
 
 /*!
  * Computes the LoRaMAC join frame decryption
@@ -105,7 +71,3 @@ void LoRaMacJoinDecrypt( const uint8_t *buffer, uint16_t size, const uint8_t *ke
  * \param [OUT] appSKey         - Application session key
  */
 void LoRaMacJoinComputeSKeys( const uint8_t *key, const uint8_t *appNonce, uint16_t devNonce, uint8_t *nwkSKey, uint8_t *appSKey );
-
-/*! \} defgroup LORAMAC */
-
-#endif // __LORAMAC_CRYPTO_H__
