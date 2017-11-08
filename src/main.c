@@ -30,15 +30,13 @@ void Print_Radio ()
 
 
 #define APP_MODE_IDLE 0
-#define APP_MODE_LISTEN0 1
-#define APP_MODE_LISTEN1 2
-#define APP_MODE_LISTEN2 3
 #define APP_MODE_INFO 10
-#define APP_MODE_RECEIVE3 20
-#define APP_MODE_TRANSMIT0 30
-#define APP_MODE_TRANSMIT1 31
-#define APP_MODE_JOIN0 40
-
+#define APP_MODE_LISTEN0              1000
+#define APP_MODE_READ                 1001
+#define APP_MODE_LISTEN               1002
+#define APP_MODE_JOIN_TRANSMIT        2000
+#define APP_MODE_JOIN_TRANSMITTING    2001
+#define APP_MODE_TRANSMIT             3000
 
 int App_Mode = APP_MODE_IDLE;
 int X = 0;
@@ -55,7 +53,7 @@ int main(void)
   NVIC_EnableIRQ (EXTI2_3_IRQn);
   NVIC_EnableIRQ (EXTI4_15_IRQn);
   //TODO: Why is this required when IRQ is not used?
-  NVIC_EnableIRQ(SPI1_IRQn);
+  NVIC_EnableIRQ (SPI1_IRQn);
   NVIC_EnableIRQ (USART2_IRQn);
 
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
@@ -98,42 +96,37 @@ int main(void)
     switch (App_Mode)
     {
       case APP_MODE_IDLE:
+        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
         Delay1 (1000);
         GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
         Delay1 (1000);
+        break;
+
+      case APP_MODE_LISTEN:
+        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (1000);
+        GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (4000);
+        break;
+
+      case APP_MODE_JOIN_TRANSMITTING:
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         break;
       
       case APP_MODE_LISTEN0:
         //Radio_Enable_Implicit_Header ();
         Radio_Enable_Explicit_Header ();
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
-        App_Mode = APP_MODE_IDLE;
+        App_Mode = APP_MODE_LISTEN;
         break;
       
-      case APP_MODE_LISTEN1:
-      {
-        uint8_t Flag;
-        char Buffer [255];
-        Flag = Radio_Read (SX1276_RegIRQFLAGS);
-        if (Flag & RFLR_IRQFLAGS_RXDONE)
+      case APP_MODE_READ:
         {
-          Radio_Receive ((uint8_t *)Buffer, 255);
-          printf ("Buffer : %s\n", Buffer);
-          printf ("RSSI   : %i\n", (int)Radio_RSSI (868100000));
-          Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
-        }
-        break;
-      }
-      
-      case APP_MODE_LISTEN2:
-      {
-        uint8_t Flag;
-        uint8_t Buffer [255];
-        uint8_t Length;
-        Flag = Radio_Read (SX1276_RegIRQFLAGS);
-        if (Flag & RFLR_IRQFLAGS_RXDONE)
-        {
+          GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+          uint8_t Buffer [255];
+          uint8_t Length;
           Length = Radio_Receive ((uint8_t *)Buffer, 255);
           printf ("Buffer:");
           for (uint8_t I = 0; I < Length; I = I + 1)
@@ -143,11 +136,9 @@ int main(void)
           }
           printf ("\nRSSI: %i\n", (int)Radio_RSSI (868100000));
           Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
+          App_Mode = APP_MODE_LISTEN;
+          break;
         }
-        App_Mode = APP_MODE_IDLE;
-        break;
-      }
-
       
       case APP_MODE_INFO:
       {
@@ -174,13 +165,8 @@ int main(void)
         break;
       }
       
-      case APP_MODE_TRANSMIT0:
-      {
-        App_Mode = APP_MODE_TRANSMIT1;
-        break;
-      }
-      
-      case APP_MODE_TRANSMIT1:
+
+      case APP_MODE_TRANSMIT:
       {
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         int R;
@@ -192,8 +178,9 @@ int main(void)
         break;
       }
       
-      case APP_MODE_JOIN0:
+      case APP_MODE_JOIN_TRANSMIT:
       {
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         int R;
         struct LRWAN_Frame_Join_Request Data = 
         {
@@ -208,7 +195,7 @@ int main(void)
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
         R = Radio_Send ((uint8_t *) &Data, sizeof (struct LRWAN_Frame_Join_Request));
         printf ("Radio_Send: %i\n", R);
-        App_Mode = APP_MODE_IDLE;
+        App_Mode = APP_MODE_JOIN_TRANSMITTING;
         break;
       }
       
@@ -243,25 +230,19 @@ void USART2_IRQHandler(void)
         break;
         
       case 'i':
-        App_Mode = APP_MODE_INFO;
+        if (App_Mode == APP_MODE_IDLE) {App_Mode = APP_MODE_INFO;}
         break;
         
       case 't':
-        if (App_Mode == APP_MODE_IDLE)
-        {
-          App_Mode = APP_MODE_TRANSMIT0;
-        }
+        if (App_Mode == APP_MODE_IDLE) {App_Mode = APP_MODE_TRANSMIT;}
         break;
       
       case 'l':
-        App_Mode = APP_MODE_LISTEN0;
+        if (App_Mode == APP_MODE_IDLE) {App_Mode = APP_MODE_LISTEN0;}
         break;
       
       case 'j':
-        if (App_Mode == APP_MODE_IDLE)
-        {
-          App_Mode = APP_MODE_JOIN0;
-        }
+        if (App_Mode == APP_MODE_IDLE) {App_Mode = APP_MODE_JOIN_TRANSMIT;}
         break;
       
       default: 
@@ -319,8 +300,11 @@ void EXTI4_15_IRQHandler ()
   {
     //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
     EXTI->PR = (1 << RADIO_DIO0_PIN);
-    App_Mode = APP_MODE_LISTEN2;
-    printf ("RADIO_DIO0_PIN\n");
+    //Clear all flags.
+    Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
+    if (App_Mode == APP_MODE_LISTEN) {App_Mode = APP_MODE_READ;}
+    else if (App_Mode == APP_MODE_JOIN_TRANSMITTING) {App_Mode = APP_MODE_IDLE;}
+    else {App_Mode = APP_MODE_IDLE;}
   }
   if((EXTI->PR & (1 << RADIO_DIO3_PIN)) == (1 << RADIO_DIO3_PIN))
   {
