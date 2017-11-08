@@ -266,18 +266,7 @@ void Board_Init ()
 __attribute__((weak)) void Board_Button ();
 
 
-void EXTI2_3_IRQHandler(void)
-{
-  //Page 289.
-  //13.5.6 EXTI pending register (EXTI_PR)
-  //This bit is set when the selected edge event arrives on the interrupt line.
-  if((EXTI->PR & (1 << BUTTON_USER_PIN)) == (1 << BUTTON_USER_PIN))
-  {
-    //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
-    EXTI->PR = (1 << BUTTON_USER_PIN);
-    Board_Button ();
-  }
-}
+
 
 
 void SysTick_Handler(void)
@@ -296,12 +285,6 @@ void SVC_Handler(void){}
 
 
 void PendSV_Handler(void){}
-
-
-void EXTI0_1_IRQHandler ()
-{
-  //__asm__("BKPT");
-}
 
 
 void SPI1_IRQHandler(void)
