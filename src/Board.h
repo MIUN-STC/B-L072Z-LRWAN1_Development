@@ -232,8 +232,7 @@ void Board_Init ()
   //[Kenth Johan] Executing this before ICR_TCCF causes error.
   //STLINK_USART->CR1 |= USART_CR1_TCIE;
 
-  NVIC_SetPriority (USART2_IRQn, 0);
-  NVIC_EnableIRQ (USART2_IRQn);
+
 
 
 
@@ -257,15 +256,7 @@ void Board_Init ()
   SYSCFG_Source_Input (SYSCFG, BUTTON_USER_PORT, BUTTON_USER_PIN);
   EXTI_Interrupt_Unmask (EXTI, BUTTON_USER_PIN);
   EXTI_Rising_Edge (EXTI, BUTTON_USER_PIN);
-  NVIC_SetPriority (EXTI2_3_IRQn, 0);
-  NVIC_EnableIRQ (EXTI2_3_IRQn);
 }
-
-
-//Weak functions can be overloaded.
-__attribute__((weak)) void Board_Button ();
-
-
 
 
 

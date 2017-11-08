@@ -45,7 +45,18 @@ int X = 0;
 
 int main(void)
 {
+  NVIC_SetPriority (EXTI0_1_IRQn, 0);
+  NVIC_SetPriority (EXTI2_3_IRQn, 0);
+  NVIC_SetPriority (EXTI4_15_IRQn, 0);
+  NVIC_SetPriority (SPI1_IRQn, 0);
+  NVIC_SetPriority (USART2_IRQn, 0);
 
+  NVIC_EnableIRQ (EXTI0_1_IRQn);
+  NVIC_EnableIRQ (EXTI2_3_IRQn);
+  NVIC_EnableIRQ (EXTI4_15_IRQn);
+  //TODO: Why is this required when IRQ is not used?
+  NVIC_EnableIRQ(SPI1_IRQn);
+  NVIC_EnableIRQ (USART2_IRQn);
 
   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN | RCC_IOPENR_IOPCEN;

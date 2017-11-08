@@ -325,8 +325,7 @@ void Radio_Init (uint32_t Frequency)
   SYSCFG_Source_Input (SYSCFG, RADIO_DIO0_PORT, RADIO_DIO0_PIN);
   EXTI_Interrupt_Unmask (EXTI, RADIO_DIO0_PIN);
   EXTI_Rising_Edge (EXTI, RADIO_DIO0_PIN);
-  NVIC_SetPriority (EXTI4_15_IRQn, 0);
-  NVIC_EnableIRQ (EXTI4_15_IRQn);
+
   
   GPIO_Pin_Mode (RADIO_DIO1_PORT, RADIO_DIO1_PIN, RADIO_DIO1_PIN_MODE);
   GPIO_Pin_Pull (RADIO_DIO1_PORT, RADIO_DIO1_PIN, RADIO_DIO1_PIN_PULL);
@@ -335,8 +334,7 @@ void Radio_Init (uint32_t Frequency)
   SYSCFG_Source_Input (SYSCFG, RADIO_DIO1_PORT, RADIO_DIO1_PIN);
   EXTI_Interrupt_Unmask (EXTI, RADIO_DIO1_PIN);
   EXTI_Rising_Edge (EXTI, RADIO_DIO1_PIN);
-  NVIC_SetPriority (EXTI0_1_IRQn, 0);
-  NVIC_EnableIRQ (EXTI0_1_IRQn);
+
   
   GPIO_Pin_Mode (RADIO_DIO2_PORT, RADIO_DIO2_PIN, RADIO_DIO2_PIN_MODE);
   GPIO_Pin_Pull (RADIO_DIO2_PORT, RADIO_DIO2_PIN, RADIO_DIO2_PIN_PULL);
@@ -345,8 +343,7 @@ void Radio_Init (uint32_t Frequency)
   SYSCFG_Source_Input (SYSCFG, RADIO_DIO2_PORT, RADIO_DIO2_PIN);
   EXTI_Interrupt_Unmask (EXTI, RADIO_DIO2_PIN);
   EXTI_Rising_Edge (EXTI, RADIO_DIO2_PIN);
-  NVIC_SetPriority (EXTI4_15_IRQn, 0);
-  NVIC_EnableIRQ (EXTI4_15_IRQn);
+
   
   GPIO_Pin_Mode (RADIO_DIO3_PORT, RADIO_DIO3_PIN, RADIO_DIO3_PIN_MODE);
   GPIO_Pin_Pull (RADIO_DIO3_PORT, RADIO_DIO3_PIN, RADIO_DIO3_PIN_PULL);
@@ -355,8 +352,7 @@ void Radio_Init (uint32_t Frequency)
   SYSCFG_Source_Input (SYSCFG, RADIO_DIO3_PORT, RADIO_DIO3_PIN);
   EXTI_Interrupt_Unmask (EXTI, RADIO_DIO3_PIN);
   EXTI_Rising_Edge (EXTI, RADIO_DIO3_PIN);
-  NVIC_SetPriority (EXTI0_1_IRQn, 0);
-  NVIC_EnableIRQ (EXTI0_1_IRQn);
+
 
 
 
@@ -386,9 +382,7 @@ void Radio_Init (uint32_t Frequency)
   SPI_Init (RADIO_SPI);
 
 
-  //TODO: Why is this required when IRQ is not used?
-  NVIC_SetPriority(SPI1_IRQn, 0);
-  NVIC_EnableIRQ(SPI1_IRQn);
+
 
   Radio_Sleep ();
 
