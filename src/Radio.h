@@ -462,10 +462,10 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
   Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done
-  while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0 && (R < 10000)) {R++;}
+  //while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0 && (R < 10000)) {R++;}
 
   // clear IRQ's
-  Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
+  //Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
   return R;
 }
 

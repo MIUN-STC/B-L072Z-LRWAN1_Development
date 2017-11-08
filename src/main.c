@@ -190,9 +190,10 @@ int main(void)
           .DevEUI   = LORAWAN_MAC, 
           .AppEUI   = LORAWAN_APPLICATION_EUI
         };
-        Data.DevNonce [0] = Radio_Read (SX1276_RegPKTRSSIVALUE) % 255;
-        Data.DevNonce [1] = Radio_Read (SX1276_RegPKTSNRVALUE) % 255;
-        //Data.AppEUI = LORAWAN_APPLICATION_EUI;
+        //Data.DevNonce [0] = Radio_Read (SX1276_RegPKTRSSIVALUE) % 255;
+        //Data.DevNonce [1] = Radio_Read (SX1276_RegPKTSNRVALUE) % 255;
+        Data.DevNonce [0] = 0;
+        Data.DevNonce [1] = 0;
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
         R = Radio_Send ((uint8_t *) &Data, sizeof (struct LRWAN_Frame_Join_Request));
         printf ("Radio_Send: %i\n", R);
@@ -308,6 +309,7 @@ void EXTI4_15_IRQHandler ()
     //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
     EXTI->PR = (1 << RADIO_DIO0_PIN);
     App_Mode = APP_MODE_LISTEN2;
+    printf ("RADIO_DIO0_PIN\n");
   }
   if((EXTI->PR & (1 << RADIO_DIO3_PIN)) == (1 << RADIO_DIO3_PIN))
   {

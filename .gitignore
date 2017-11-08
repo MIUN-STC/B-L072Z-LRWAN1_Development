@@ -3,6 +3,7 @@
 
 # Whitelist
 !/*
+!/src/*
 
 # Files
 !.gitignore
