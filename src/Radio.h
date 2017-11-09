@@ -419,30 +419,9 @@ void Radio_Init (uint32_t Frequency)
 }
 
 
-void Radio_Enable_Implicit_Header ()
-{
-  uint8_t Value;
-  Value = Radio_Read (SX1276_RegMODEMCONFIG1);
-  Value |= RFLR_MODEMCONFIG1_IMPLICITHEADER_ON;
-  Radio_Write (SX1276_RegMODEMCONFIG1, Value);
-  //printf ("SX1276_RegMODEMCONFIG1 %x\n", Value);
-}
-
-
-void Radio_Enable_Explicit_Header ()
-{
-  uint8_t Value;
-  Value = Radio_Read (SX1276_RegMODEMCONFIG1);
-  Value &= RFLR_MODEMCONFIG1_IMPLICITHEADER_MASK;
-  Radio_Write (SX1276_RegMODEMCONFIG1, Value);
-  //printf ("SX1276_RegMODEMCONFIG1 %x\n", Value);
-}
-
-
 int Radio_Send (uint8_t * Data, uint8_t Count)
 {
   int R = 0;
-  Radio_Enable_Explicit_Header ();
   
   Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
   Radio_Write (SX1276_RegPAYLOADLENGTH, Count);
@@ -479,39 +458,6 @@ uint8_t Radio_Receive (uint8_t * Data, uint8_t Count)
   }
   //Radio_Write (SX1276_RegFIFORXCURRENTADDR, 0x00);
   
-  return Length;
-}
-
-
-uint8_t Radio_Parse_Packet ()
-{
-  uint8_t Length = 0;
-  uint8_t irqFlags = Radio_Read (SX1276_RegIRQFLAGS);
-
-  Radio_Enable_Explicit_Header ();
-
-  Radio_Write (SX1276_RegIRQFLAGS, irqFlags);
-
-
-  if ((irqFlags & RFLR_IRQFLAGS_RXDONE_MASK) && (irqFlags & RFLR_IRQFLAGS_PAYLOADCRCERROR_MASK) == 0)
-  {
-    Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
-
-    // set FIFO address to current RX address
-    Radio_Write (SX1276_RegFIFOADDRPTR, Radio_Read (SX1276_RegFIFORXCURRENTADDR));
-
-    // put in standby mode
-    Radio_Idle ();
-  }
-  else if (Radio_Read (SX1276_RegOPMODE) != (RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE))
-  {
-    // not currently in RX mode
-    // reset FIFO address
-    Radio_Write (SX1276_RegFIFOADDRPTR, 0);
-    // put in single RX mode
-    Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
-  }
-
   return Length;
 }
 

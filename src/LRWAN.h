@@ -25,7 +25,7 @@
 // App Key
 #define LORAWAN_APPLICATION_KEY {0xa3,0x51,0x5e,0x56,0x2a,0x69,0x1e,0xea,0x50,0xf5,0x4e,0x18,0xd0,0x6c,0x54,0xa4}
 
-#define LORAWAN_MAC {0x00, 0x80, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00} 
+#define LORAWAN_MAC {0x00, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00} 
 
 struct __attribute__((__packed__)) 
 LRWAN_Frame_Join_Request
@@ -73,6 +73,8 @@ void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16]
   uint8_t const * Data = (uint8_t const *) Frame;
   reverse (Frame->AppEUI, 8);
   reverse (Frame->DevEUI, 8);
+  //Frame->DevNonce [0] = 0;
+  //Frame->DevNonce [1] = 0;
   LoRaMacJoinComputeMic (Data, Size, Key, Frame->MIC);
 }
 

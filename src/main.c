@@ -79,7 +79,7 @@ int main(void)
 
 
   Board_Init ();
-  Radio_Init (868100000); //Hz
+  Radio_Init (868500000); //Hz
   
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
@@ -116,9 +116,9 @@ int main(void)
         break;
       
       case APP_MODE_LISTEN0:
-        //Radio_Enable_Implicit_Header ();
-        Radio_Enable_Explicit_Header ();
+        Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_6 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
+        //Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
         App_Mode = APP_MODE_LISTEN;
         break;
       
@@ -134,9 +134,9 @@ int main(void)
             if ((I % 8) == 0) {printf ("\n");}
             printf ("%02x ", Buffer [I]);
           }
-          printf ("\nRSSI: %i\n", (int)Radio_RSSI (868100000));
+          printf ("\nRSSI: %i\n", (int)Radio_RSSI (868300000));
           Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
-          App_Mode = APP_MODE_LISTEN;
+          App_Mode = APP_MODE_LISTEN0;
           break;
         }
       
@@ -180,7 +180,7 @@ int main(void)
       
       case APP_MODE_JOIN_TRANSMIT:
       {
-        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         int R;
         struct LRWAN_Frame_Join_Request Data = 
         {
@@ -190,10 +190,10 @@ int main(void)
         };
         //Data.DevNonce [0] = Radio_Read (SX1276_RegPKTRSSIVALUE) % 255;
         //Data.DevNonce [1] = Radio_Read (SX1276_RegPKTSNRVALUE) % 255;
-        Data.DevNonce [0] = 0;
-        Data.DevNonce [1] = 0;
+        Data.DevNonce [0] = 0xAF;
+        Data.DevNonce [1] = 0xB2;
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
-        R = Radio_Send ((uint8_t *) &Data, sizeof (struct LRWAN_Frame_Join_Request));
+        R = Radio_Send ((uint8_t *) &Data, 23);
         printf ("Radio_Send: %i\n", R);
         App_Mode = APP_MODE_JOIN_TRANSMITTING;
         break;
@@ -302,9 +302,24 @@ void EXTI4_15_IRQHandler ()
     EXTI->PR = (1 << RADIO_DIO0_PIN);
     //Clear all flags.
     Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
-    if (App_Mode == APP_MODE_LISTEN) {App_Mode = APP_MODE_READ;}
-    else if (App_Mode == APP_MODE_JOIN_TRANSMITTING) {App_Mode = APP_MODE_IDLE;}
-    else {App_Mode = APP_MODE_IDLE;}
+    switch (App_Mode)
+    {
+      case APP_MODE_LISTEN:
+        App_Mode = APP_MODE_READ;
+        break;
+        
+      case APP_MODE_JOIN_TRANSMITTING:
+        App_Mode = APP_MODE_IDLE;
+        break;
+        
+      case APP_MODE_READ:
+        App_Mode = APP_MODE_READ;
+        break;
+        
+      default:
+        App_Mode = APP_MODE_IDLE;
+        break;
+    }
   }
   if((EXTI->PR & (1 << RADIO_DIO3_PIN)) == (1 << RADIO_DIO3_PIN))
   {
