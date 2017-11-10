@@ -4,6 +4,7 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 */
 
 #include <stdio.h>
+#include <string.h>
 #include "stm32l072xx.h"
 #include "system_stm32l0xx.h"
 #include "utility.h"
@@ -23,23 +24,25 @@ void Print_Radio ()
   for (int I = 0; I < 128; I = I + 1)
   {
     R = Radio_Read (I);
-    sprintf (Buffer, "%x : %x\n", I, R);
+    sprintf (Buffer, "%02x : %02x\n", I, R);
     USART_Transmit_CString_Blocking (STLINK_USART, Buffer);
   }
 }
 
 
-#define APP_MODE_IDLE 0
-#define APP_MODE_INFO 10
+#define APP_MODE_IDLE                 0
+#define APP_MODE_INFO                 10
 #define APP_MODE_LISTEN0              1000
 #define APP_MODE_READ                 1001
 #define APP_MODE_LISTEN               1002
 #define APP_MODE_JOIN_TRANSMIT        2000
 #define APP_MODE_JOIN_TRANSMITTING    2001
 #define APP_MODE_TRANSMIT             3000
+#define APP_MODE_TRANSMITTING         3001
 
 int App_Mode = APP_MODE_IDLE;
 int X = 0;
+int App_TX_Counter = 0;
 
 int main(void)
 {
@@ -79,8 +82,13 @@ int main(void)
 
 
   Board_Init ();
-  Radio_Init (868500000); //Hz
-  
+  Radio_Init (868300000); //Hz
+  Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_11 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+  Radio_Write (SX1276_RegSYNCWORD, 0x34);
+  Radio_Write (SX1276_RegLNA, RFLR_LNA_GAIN_G4 | RFLR_LNA_BOOST_HF_ON);
+  //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON);
+  Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
+  //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_OFF);
 
   USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
   GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
@@ -95,50 +103,44 @@ int main(void)
 
     switch (App_Mode)
     {
-      case APP_MODE_IDLE:
-        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-        Delay1 (1000);
-        GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-        Delay1 (1000);
-        break;
-
-      case APP_MODE_LISTEN:
-        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-        Delay1 (1000);
-        GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
-        Delay1 (4000);
-        break;
-
       case APP_MODE_JOIN_TRANSMITTING:
-        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+      case APP_MODE_TRANSMITTING:
+      case APP_MODE_LISTEN:
+      case APP_MODE_IDLE:
+        GPIO_Pin_Clear (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (1000);
+        GPIO_Pin_Set (LED_LD2_GREEN_PORT, LED_LD2_GREEN_PIN);
+        Delay1 (1000);
         break;
       
       case APP_MODE_LISTEN0:
+      {
+        App_Mode = APP_MODE_LISTEN;
+        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        //Radio_Write (SX1276_RegSYNCWORD, 0x34);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_6 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
         //Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
-        App_Mode = APP_MODE_LISTEN;
         break;
+      }
       
       case APP_MODE_READ:
+      {
+        App_Mode = APP_MODE_LISTEN0;
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        uint8_t Buffer [255];
+        uint8_t Length;
+        Length = Radio_Receive ((uint8_t *)Buffer, 255);
+        printf ("Buffer:");
+        for (uint8_t I = 0; I < Length; I = I + 1)
         {
-          GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-          uint8_t Buffer [255];
-          uint8_t Length;
-          Length = Radio_Receive ((uint8_t *)Buffer, 255);
-          printf ("Buffer:");
-          for (uint8_t I = 0; I < Length; I = I + 1)
-          {
-            if ((I % 8) == 0) {printf ("\n");}
-            printf ("%02x ", Buffer [I]);
-          }
-          printf ("\nRSSI: %i\n", (int)Radio_RSSI (868300000));
-          Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
-          App_Mode = APP_MODE_LISTEN0;
-          break;
+          if ((I % 8) == 0) {printf ("\n");}
+          printf ("%02x ", Buffer [I]);
         }
+        printf ("\nRSSI: %i\n", (int)Radio_RSSI (868300000));
+        Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
+        break;
+      }
       
       case APP_MODE_INFO:
       {
@@ -168,34 +170,51 @@ int main(void)
 
       case APP_MODE_TRANSMIT:
       {
+        App_Mode = APP_MODE_TRANSMITTING;
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        Radio_Write (SX1276_RegPACONFIG, 0xFF);
+        //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
+        //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_AGCAUTO_ON);
+        //Radio_Write (SX1276_RegPARAMP, 0x09);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
-        int R;
-        char Send_Buffer [20];
-        sprintf (Send_Buffer, "World %i", X++);
-        R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
-        printf ("Radio_Send: %i\n", R);
-        App_Mode = APP_MODE_IDLE;
+        Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
+        //int R;
+        //char Send_Buffer [20];
+        //sprintf (Send_Buffer, "World %i", X++);
+        //R = Radio_Send ((uint8_t *)Send_Buffer, sizeof (Send_Buffer));
+        uint8_t Buf [20];
+        memset (Buf, 0x22, 20);
+        //Radio_Send ((uint8_t []){0x11, 0x10}, 2);
+        Radio_Send (Buf, 20);
+        //Print_Radio ();
+        //printf ("Radio_Send: %i\n", R);
         break;
       }
       
       case APP_MODE_JOIN_TRANSMIT:
       {
+        App_Mode = APP_MODE_TRANSMITTING;
+        App_TX_Counter++;
+        Radio_Write (SX1276_RegPACONFIG, 0xFF);
+        //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
+        //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_AGCAUTO_ON);
+        //Radio_Write (SX1276_RegPARAMP, 0x09);
+        Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
-        int R;
         struct LRWAN_Frame_Join_Request Data = 
         {
           .MDHR     = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,
           .DevEUI   = LORAWAN_MAC, 
           .AppEUI   = LORAWAN_APPLICATION_EUI
         };
-        //Data.DevNonce [0] = Radio_Read (SX1276_RegPKTRSSIVALUE) % 255;
-        //Data.DevNonce [1] = Radio_Read (SX1276_RegPKTSNRVALUE) % 255;
-        Data.DevNonce [0] = 0xAF;
-        Data.DevNonce [1] = 0xB2;
+        Data.DevNonce [0] = Radio_Read (SX1276_RegRSSIWIDEBAND) + App_TX_Counter;
+        Data.DevNonce [1] = App_TX_Counter;
+        //Data.DevNonce [0] = 0xAF;
+        //Data.DevNonce [1] = 0xB2;
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
-        R = Radio_Send ((uint8_t *) &Data, 23);
-        printf ("Radio_Send: %i\n", R);
-        App_Mode = APP_MODE_JOIN_TRANSMITTING;
+        Radio_Send ((uint8_t *) &Data, 23);
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        //printf ("Radio_Send: %i\n", R);
         break;
       }
       
@@ -308,12 +327,20 @@ void EXTI4_15_IRQHandler ()
         App_Mode = APP_MODE_READ;
         break;
         
-      case APP_MODE_JOIN_TRANSMITTING:
-        App_Mode = APP_MODE_IDLE;
+      case APP_MODE_LISTEN0:
         break;
         
       case APP_MODE_READ:
-        App_Mode = APP_MODE_READ;
+        break;
+        
+      case APP_MODE_TRANSMIT:
+        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        App_Mode = APP_MODE_IDLE;
+        break;
+        
+      case APP_MODE_TRANSMITTING:
+        GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        App_Mode = APP_MODE_IDLE;
         break;
         
       default:

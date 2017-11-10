@@ -154,19 +154,19 @@ WLCSP49
 
 #define RADIO_ANT_SWITCH_RX_PORT        GPIOA
 #define RADIO_ANT_SWITCH_RX_PIN         1
-#define RADIO_ANT_SWITCH_RX_MODE        GPIO_MODE_OUTPUT_PP
+#define RADIO_ANT_SWITCH_RX_MODE        GPIO_MODE_INPUT
 #define RADIO_ANT_SWITCH_RX_SPEED       GPIO_SPEED_FREQ_LOW
 #define RADIO_ANT_SWITCH_RX_PULL        GPIO_NOPULL
 
 #define RADIO_ANT_SWITCH_TX_BOOST_PORT  GPIOC
 #define RADIO_ANT_SWITCH_TX_BOOST_PIN   1
-#define RADIO_ANT_SWITCH_TX_BOOST_MODE  GPIO_MODE_OUTPUT_PP
+#define RADIO_ANT_SWITCH_TX_BOOST_MODE  GPIO_MODE_INPUT
 #define RADIO_ANT_SWITCH_TX_BOOST_SPEED GPIO_SPEED_FREQ_LOW
 #define RADIO_ANT_SWITCH_TX_BOOST_PULL  GPIO_NOPULL
 
 #define RADIO_ANT_SWITCH_TX_RFO_PORT    GPIOC
 #define RADIO_ANT_SWITCH_TX_RFO_PIN     2
-#define RADIO_ANT_SWITCH_TX_RFO_MODE    GPIO_MODE_OUTPUT_PP
+#define RADIO_ANT_SWITCH_TX_RFO_MODE    GPIO_MODE_INPUT
 #define RADIO_ANT_SWITCH_TX_RFO_SPEED   GPIO_SPEED_FREQ_LOW
 #define RADIO_ANT_SWITCH_TX_RFO_PULL    GPIO_NOPULL
 
@@ -415,7 +415,7 @@ void Radio_Init (uint32_t Frequency)
   Value |= RFLR_PACONFIG_PASELECT_PABOOST;
   Radio_Write (SX1276_RegPACONFIG, Value);
 
-  Radio_Idle ();
+  //Radio_Idle ();
 }
 
 
@@ -430,10 +430,12 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
   for (int I = 0; I < Count; I = I + 1)
   {
     Radio_Write (SX1276_RegFIFO, Data [I]);
+    printf ("%02x ", Data [I]);
   }
   uint8_t Value = 0;
   Value |= RFLR_OPMODE_LONGRANGEMODE_ON;
   Value |= RFLR_OPMODE_TRANSMITTER;
+  printf ("Val: %x\n", Value);
   Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done
