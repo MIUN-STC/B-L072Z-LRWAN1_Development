@@ -10,7 +10,7 @@
 #include "GPIO.h"
 #include "Clock.h"
 #include "RTC.h"
-#include <stdio.h>
+
 
 #define BOARD_NAME "B-L072Z-LRWAN1"
 

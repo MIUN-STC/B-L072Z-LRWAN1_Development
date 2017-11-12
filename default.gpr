@@ -1,11 +1,93 @@
 project Default is
 
-   for Languages use ("c");
+   for Languages use ("c", "asm");
    for Source_Dirs use ("src", "src/samtech");
-   for Object_Dir use "build";
-   for Exec_Dir use "build";
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
    for Main use ("main.c");
-   for Target use "arm-eabi";
+   for Target use "arm-none-eabi";
+
+   package Naming is
+      for Spec_Suffix ("c") use ".h";
+      for Body_Suffix ("c") use ".c";
+      for Body_Suffix ("asm") use ".s";
+   end Naming;
+
+   package Ide is
+      for Gnat use "arm-eabi-gnat";
+      for Gnatlist use "arm-eabi-gnatls";
+      for Debugger_Command use "arm-eabi-gdb";
+      --for Connection_Config_File use "stm32l0.cfg";
+      for Program_Host use "localhost:4242";
+      for Communication_Protocol use "remote";
+      --for Connection_Tool use "openocd";
+      for Connection_Tool use "st-util";
+   end Ide;
+
+   package Builder is
+      for Executable_Suffix use ".elf";
+      Sw := ("-mcpu=cortex-m0", "-mthumb", "-f");
+      for Default_Switches ("c") use Sw;
+      for Default_Switches ("asm") use Sw;
+   end Builder;
+
+   package Compiler is
+      Sw :=
+        ("-Og", "-Wall", "-g", "-gdwarf-2",
+         --"-f",
+         "-fdata-sections", "-ffunction-sections",
+         --"-fcallgraph-info=su",
+         "-MMD", "-MP",
+         ""
+        );
+      for Default_Switches ("c") use Sw &
+      (
+       --"-MF""main.d""","-MT""main.d"""
+      );
+      --for Default_Switches ("c") use Sw & ("-MF""build/main.d""","-MT""build/main.d""", "-Wa,-a,-ad,-alms=""build/main.lst""");
+      for Default_Switches ("asm") use Sw &
+      (
+       "-x", "assembler-with-cpp",
+       --"-x",
+       --"-MF""startup_stm32l072xx.d""", "-MT""startup_stm32l072xx.d""",
+       --"-lnosys",
+       ""
+      );
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("c") use
+        (
+         "-mcpu=cortex-m0", "-mthumb",
+         "-specs=nano.specs",
+         --"-specs=rdimon.specs",
+         --"-specs=nosys.specs",
+         --"-nostartfiles",
+         --"-nodefaultlibs",
+         --"-nostdlib",
+         --"-TSTM32L072CZEx_FLASH.ld",
+         "-T" & Default'Project_Dir & "src/STM32L072CZEx_FLASH.ld",
+         --"-Tsrc/STM32L072CZEx_FLASH.ld",
+         --"-Wl,-Map=build/main.map,--cref",
+         "-Wl,--gc-sections",
+         "-Wl,--print-memory-usage",
+         --"-o main.elf1",
+         "-lc",
+         "-lm",
+         "-lnosys",
+         ""
+        );
+   end Linker;
+
+   package Binder is
+      for Default_Switches ("c") use
+        (
+         "-specs=nano.specs",
+         --"-specs=rdimon.specs",
+         --"--specs=nosys.specs",
+         ""
+        );
+   end Binder;
 
 end Default;
 

@@ -3,7 +3,7 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 
 */
 
-#include <string.h>
+//#include <string.h>
 #include "stm32l072xx.h"
 #include "system_stm32l0xx.h"
 #include "utility.h"
@@ -12,17 +12,17 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 #include "Radio.h"
 #include "RCC.h"
 #include "LRWAN.h"
-#include "USART.h"
 
 
 
 void Print_Radio ()
 {
   uint8_t R;
+  char Buffer [100];
   for (int I = 0; I < 128; I = I + 1)
   {
     R = Radio_Read (I);
-    printf ("%02x : %02x\n", I, R);
+    printf (Buffer, "%02x : %02x\n", I, R);
   }
 }
 

@@ -114,6 +114,7 @@ WLCSP49
 #include "SPI.h"
 #include "EXTI.h"
 #include "SYSCFG.h"
+#include "USART.h"
 
 #define RADIO_NAME "SX1276"
 
