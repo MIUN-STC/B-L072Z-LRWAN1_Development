@@ -81,7 +81,7 @@ int main(void)
 
   Board_Init ();
   Radio_Init (868300000); //Hz
-  Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_11 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+  Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_7 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
   Radio_Write (SX1276_RegSYNCWORD, 0x34);
   Radio_Write (SX1276_RegLNA, RFLR_LNA_GAIN_G4 | RFLR_LNA_BOOST_HF_ON);
   //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON);
@@ -130,6 +130,8 @@ int main(void)
         uint8_t Length;
         Length = Radio_Receive ((uint8_t *)Buffer, 255);
         App_printf ("RADIO\n");
+        App_printf ("CRC On: %d\n", Radio_Read (SX1276_RegHOPCHANNEL) & RFLR_HOPCHANNEL_CRCONPAYLOAD_ON);
+        App_printf ("CRC Error: %d", Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_PAYLOADCRCERROR);
         for (uint8_t I = 0; I < Length; I = I + 1)
         {
           if ((I % 8) == 0) {App_printf ("\r\n");}
@@ -169,7 +171,7 @@ int main(void)
       {
         App_Mode = APP_MODE_TRANSMITTING;
         GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        Radio_Write (SX1276_RegPACONFIG, 0xFF);
+        Radio_Write (SX1276_RegPACONFIG, 0x00);
         //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
         //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_AGCAUTO_ON);
         //Radio_Write (SX1276_RegPARAMP, 0x09);

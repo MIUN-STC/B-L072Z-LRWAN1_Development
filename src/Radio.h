@@ -397,27 +397,6 @@ void Radio_Init (uint32_t Frequency)
   Radio_Write (SX1276_RegFIFOTXBASEADDR, 0);
   //read base address in FIFO data buffer for RX demodulator
   Radio_Write (SX1276_RegFIFORXBASEADDR, 0);
-
-
-
-  uint8_t Value;
-
-  // set LNA boost
-  Value = 0;
-  Value |= RFLR_LNA_GAIN_G1;
-  Value |= RFLR_LNA_BOOST_HF_ON;
-  Radio_Write (SX1276_RegLNA, Value);
-
-  // set auto AGC
-  Radio_Write (SX1276_RegMODEMCONFIG3, 0x04);
-
-
-  //set output power
-  Value = 0;
-  Value |= RFLR_PACONFIG_PASELECT_PABOOST;
-  Radio_Write (SX1276_RegPACONFIG, Value);
-
-  //Radio_Idle ();
 }
 
 
