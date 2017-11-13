@@ -115,6 +115,7 @@ WLCSP49
 #include "EXTI.h"
 #include "SYSCFG.h"
 #include "USART.h"
+#include "App_printf.h"
 
 #define RADIO_NAME "SX1276"
 
@@ -431,12 +432,12 @@ int Radio_Send (uint8_t * Data, uint8_t Count)
   for (int I = 0; I < Count; I = I + 1)
   {
     Radio_Write (SX1276_RegFIFO, Data [I]);
-    printf ("%02x ", Data [I]);
+    App_printf ("%02x ", Data [I]);
   }
   uint8_t Value = 0;
   Value |= RFLR_OPMODE_LONGRANGEMODE_ON;
   Value |= RFLR_OPMODE_TRANSMITTER;
-  printf ("Val: %x\n", Value);
+  App_printf ("Val: %x\n", Value);
   Radio_Write (SX1276_RegOPMODE, Value);
 
   // wait for TX done

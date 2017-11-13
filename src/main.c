@@ -13,6 +13,7 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 #include "RCC.h"
 #include "LRWAN.h"
 #include "USART.h"
+#include "App_printf.h"
 
 
 
@@ -22,7 +23,7 @@ void Print_Radio ()
   for (int I = 0; I < 128; I = I + 1)
   {
     R = Radio_Read (I);
-    printf ("%02x : %02x\n", I, R);
+    App_printf ("%02x : %02x\n", I, R);
   }
 }
 
@@ -87,14 +88,14 @@ int main(void)
   Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
   //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_OFF);
 
-  USART_Transmit_CString_Blocking (STLINK_USART, "Resetting RADIO\r\n");
+  App_printf ("Resetting RADIO\r\n");
   GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
   Delay1 (1000);
   GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
   Delay1 (1000);
 
-  USART_Transmit_CString_Blocking (STLINK_USART, "Loop main\r\n");
-
+  App_printf ("Loop main\r\n");
+  
   while (1)
   {
 
@@ -128,13 +129,13 @@ int main(void)
         uint8_t Buffer [255];
         uint8_t Length;
         Length = Radio_Receive ((uint8_t *)Buffer, 255);
-        printf ("Buffer:");
+        App_printf ("RADIO\n");
         for (uint8_t I = 0; I < Length; I = I + 1)
         {
-          if ((I % 8) == 0) {printf ("\n");}
-          printf ("%02x ", Buffer [I]);
+          if ((I % 8) == 0) {App_printf ("\r\n");}
+          App_printf ("%02x ", Buffer [I]);
         }
-        printf ("\nRSSI: %i\n", (int)Radio_RSSI (868300000));
+        App_printf ("\nRSSI: %d\n", (int)Radio_RSSI (868300000));
         Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         break;
       }
@@ -153,17 +154,16 @@ int main(void)
         FIFORXBASEADDR = Radio_Read (SX1276_RegFIFORXBASEADDR);
         FIFORXCURRENTADDR = Radio_Read (SX1276_RegFIFORXCURRENTADDR);
         Radio_Receive ((uint8_t *)Buffer, 255);
-        printf ("SX1276_RegMODEMSTAT      %x\n", MODEMSTAT);
-        printf ("SX1276_RegIRQFLAGS       %x\n", IRQFLAGS);
-        printf ("SX1276_RegRXNBBYTES      %x\n", RXNBBYTES);
-        printf ("SX1276_RegFIFORXBASEADDR %x\n", FIFORXBASEADDR);
-        printf ("RegFIFORXCURRENTADDR     %x\n", FIFORXCURRENTADDR);
-        printf ("Buffer                   %s\n", Buffer);
+        App_printf ("SX1276_RegMODEMSTAT      %x\n", MODEMSTAT);
+        App_printf ("SX1276_RegIRQFLAGS       %x\n", IRQFLAGS);
+        App_printf ("SX1276_RegRXNBBYTES      %x\n", RXNBBYTES);
+        App_printf ("SX1276_RegFIFORXBASEADDR %x\n", FIFORXBASEADDR);
+        App_printf ("RegFIFORXCURRENTADDR     %x\n", FIFORXCURRENTADDR);
+        App_printf ("Buffer                   %s\n", Buffer);
         Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         App_Mode = APP_MODE_IDLE;
         break;
       }
-
 
       case APP_MODE_TRANSMIT:
       {
@@ -184,7 +184,7 @@ int main(void)
         //Radio_Send ((uint8_t []){0x11, 0x10}, 2);
         Radio_Send (Buf, 20);
         //Print_Radio ();
-        //printf ("Radio_Send: %i\n", R);
+        //App_printf ("Radio_Send: %i\n", R);
         break;
       }
 
@@ -211,7 +211,7 @@ int main(void)
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
         Radio_Send ((uint8_t *) &Data, 23);
         GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        //printf ("Radio_Send: %i\n", R);
+        //App_printf ("Radio_Send: %i\n", R);
         break;
       }
 
@@ -284,14 +284,14 @@ void EXTI0_1_IRQHandler ()
     //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
     EXTI->PR = (1 << RADIO_DIO1_PIN);
     GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-    printf ("RADIO_DIO1_PIN\n");
+    App_printf ("RADIO_DIO1_PIN\n");
   }
   if((EXTI->PR & (1 << RADIO_DIO2_PIN)) == (1 << RADIO_DIO2_PIN))
   {
     //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
     EXTI->PR = (1 << RADIO_DIO2_PIN);
     GPIO_Pin_Toggle (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-    printf ("RADIO_DIO2_PIN\n");
+    App_printf ("RADIO_DIO2_PIN\n");
   }
 }
 
@@ -349,7 +349,7 @@ void EXTI4_15_IRQHandler ()
   {
     //This bit is cleared by writing it to 1 or by changing the sensitivity of the edge detector.
     EXTI->PR = (1 << RADIO_DIO3_PIN);
-    printf ("RADIO_DIO3_PIN\n");
+    App_printf ("RADIO_DIO3_PIN\n");
   }
   //printf ("EXTI4_15!\n");
 }
