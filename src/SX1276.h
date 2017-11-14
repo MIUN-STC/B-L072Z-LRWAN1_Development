@@ -48,6 +48,7 @@
 #define SX1276_RegHOPPERIOD                            0x24
 #define SX1276_RegFIFORXBYTEADDR                       0x25
 #define SX1276_RegMODEMCONFIG3                         0x26
+#define SX1276_RegPpmCorrection                        0x27
 #define SX1276_RegFEIMSB                               0x28
 #define SX1276_RegFEIMID                               0x29
 #define SX1276_RegFEILSB                               0x2A

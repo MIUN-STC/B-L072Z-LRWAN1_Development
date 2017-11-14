@@ -403,25 +403,15 @@ void Radio_Init (uint32_t Frequency)
 int Radio_Send (uint8_t * Data, uint8_t Count)
 {
   int R = 0;
-  
   Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
   Radio_Write (SX1276_RegPAYLOADLENGTH, Count);
-  //int Length;
-  //Length = Radio_Read (SX1276_RegPAYLOADLENGTH);
   for (int I = 0; I < Count; I = I + 1)
   {
     Radio_Write (SX1276_RegFIFO, Data [I]);
-    App_printf ("%02x ", Data [I]);
   }
-  uint8_t Value = 0;
-  Value |= RFLR_OPMODE_LONGRANGEMODE_ON;
-  Value |= RFLR_OPMODE_TRANSMITTER;
-  App_printf ("Val: %x\n", Value);
-  Radio_Write (SX1276_RegOPMODE, Value);
-
+  Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_TRANSMITTER);
   // wait for TX done
   //while ((Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_TXDONE) == 0 && (R < 10000)) {R++;}
-
   // clear IRQ's
   //Radio_Write (SX1276_RegIRQFLAGS, RFLR_IRQFLAGS_TXDONE_MASK);
   return R;
