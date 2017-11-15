@@ -38,6 +38,65 @@ void Print_Radio_FError ()
 }
 
 
+
+void App_Print_LRWAN_Message (union LRWAN_Message * Message)
+{
+  switch (Message->MDHR & LWAN_MHDR_MTYPE)
+  {
+    case LWAN_MDHR_MTYPE_JOIN_REQUEST:
+    {
+    App_printf ("AppEUI:   ");
+    for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.AppEUI [I]);}
+    App_printf ("\n");
+    App_printf ("DevEUI:   ");
+    for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.DevEUI [I]);}
+    App_printf ("\n");
+    App_printf ("DevNonce: ");
+    for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Request.DevNonce [I]);}
+    App_printf ("\n");
+    break;
+    }
+    case LWAN_MDHR_MTYPE_JOIN_ACCEPT:
+    {
+    App_printf ("AppNonce: ");
+    for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.AppNonce [I]);}
+    App_printf ("\n");
+    App_printf ("NetID: ");
+    for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.NetID [I]);}
+    App_printf ("\n");
+    App_printf ("DevAddr: ");
+    for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->Accept.DevAddr [I]);}
+    App_printf ("\n");
+    App_printf ("DLSettings: %x\n", Message->Accept.DLSettings);
+    App_printf ("RXDelay:    %x\n", Message->Accept.RXDelay);
+    break;
+    }
+    case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_UP:
+    case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_DOWN:
+    case LWAN_MDHR_MTYPE_CONFIRMED_DATA_UP:
+    case LWAN_MDHR_MTYPE_CONFIRMED_DATA_DOWN:
+    App_printf ("DevAddr: ");
+    for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->Data.DevAddr [I]);}
+    App_printf ("\n");
+    App_printf ("FHDR_ADR:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADR) == LRWAN_FHDR_ADR);
+    App_printf ("FHDR_ADRACKREQ: %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADRACKREQ) == LRWAN_FHDR_ADRACKREQ);
+    App_printf ("FHDR_ACK:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ACK) == LRWAN_FHDR_ACK);
+    App_printf ("FHDR_RFU:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_RFU) == LRWAN_FHDR_RFU);
+    App_printf ("FHDR_FPENDING:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FPENDING) == LRWAN_FHDR_FPENDING);
+    App_printf ("FHDR_FOPTSLEN:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FOPTSLEN));
+    App_printf ("FCnt: ");
+    for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Data.FCnt [I]);}
+    App_printf ("\n");
+    break;
+    case LWAN_MDHR_MTYPE_RFU:
+    case LWAN_MDHR_MTYPE_PROPRIETARY:
+    break;
+    break;
+  }
+}
+
+
+
 #define APP_MODE_IDLE                 0
 #define APP_MODE_INFO                 10
 #define APP_MODE_LISTEN0              1000
@@ -90,33 +149,40 @@ int main(void)
 
 
   Board_Init ();
-  Radio_Init (868300000); //Hz
-  
+  Radio_Init ();
+
+  App_printf ("Resetting RADIO\r\n");
+  GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
+  Delay1 (10000);
+  GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
+  //Save power. Reset pin is pulled up in SX1276.
+  GPIO_Pin_Mode (RADIO_RESET_PORT, RADIO_RESET_PIN, GPIO_MODE_INPUT);
+  Delay1 (10000);
+
+  SPI_Init (RADIO_SPI);
+  Radio_Sleep ();
+  //Radio_Set_Carrier_Frequency (800300000);
+  //Radio_Set_Carrier_Frequency (868300000);
+  //Radio_Set_Carrier_Frequency (868300000);
+  Radio_Set_Carrier_Frequency (869900000);
+  Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
+  Radio_Write (SX1276_RegFIFOTXBASEADDR, 0);
+  Radio_Write (SX1276_RegFIFORXBASEADDR, 0);
   Radio_Write (SX1276_RegSYNCWORD, 0x34);
   Radio_Write (SX1276_RegLNA, RFLR_LNA_GAIN_G4 | RFLR_LNA_BOOST_HF_ON);
   //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON);
   Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_ON);
-  // In LoRaWAN, a gateway applies I/Q inversion on TX, and nodes do the
-  // same on RX. This ensures that gateways can talk to nodes and vice
-  // versa, but gateways will not hear other gateways and nodes will not
-  // hear other nodes. By uncommenting this macro, this inversion is
-  // disabled and this node can hear other nodes. If two nodes both have
-  // this macro set, they can talk to each other (but they can no longer
-  // hear gateways). This should probably only be used when debugging
-  // and/or when talking to the radio directly (e.g. like in the "raw"
-  // example).
-  //Radio_Write (SX1276_RegINVERTIQ, 0x67);
-  Radio_Write (SX1276_RegINVERTIQ, 0x27);
+  Radio_Write (SX1276_RegINVERTIQ, 0x67); //IQ inverted. Node to GW
+  //Radio_Write (SX1276_RegINVERTIQ, 0x27); //IQ non inverted. Node to Node
   //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_OFF);
-
-  App_printf ("Resetting RADIO\r\n");
-  GPIO_Pin_Clear (RADIO_RESET_PORT, RADIO_RESET_PIN);
-  Delay1 (1000);
-  GPIO_Pin_Set (RADIO_RESET_PORT, RADIO_RESET_PIN);
-  Delay1 (1000);
-
+  
+  
+  
   App_printf ("Loop %s.\r\n", "main");
   
+  uint8_t Buf [20];
+  memset (Buf, 0x22, 20);
+        
   while (1)
   {
 
@@ -136,11 +202,12 @@ int main(void)
       {
         App_Mode = APP_MODE_LISTEN;
         GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_7 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_OFF);
+        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_OFF);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
         Radio_Write (SX1276_RegSYMBTIMEOUTLSB, 0x18);
-        Radio_Set_Carrier_Frequency (868300000 + 51000);
+        //Radio_Set_Carrier_Frequency (868300000 + 51000);
+        //Radio_Set_Carrier_Frequency (869100000);
         Radio_Write (SX1276_RegPpmCorrection, 0x00);
         //Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RECEIVER_SINGLE);
         //Print_Radio ();
@@ -152,70 +219,32 @@ int main(void)
       {
         App_Mode = APP_MODE_LISTEN0;
         GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        uint8_t Buffer [255];
+        union LRWAN_Message Message [1];
+        uint8_t Payload [256];
         uint8_t Length;
-        Length = Radio_Receive ((uint8_t *)Buffer, 255);
+        Length = Radio_Receive ((uint8_t *)Payload, 255);
         App_printf ("\nRX EVENT\n");
+        App_printf ("Length:    %d\n", (int)Length);
         App_printf ("CRC On:    %d\n", (Radio_Read (SX1276_RegHOPCHANNEL) & RFLR_HOPCHANNEL_CRCONPAYLOAD_ON) == RFLR_HOPCHANNEL_CRCONPAYLOAD_ON);
         App_printf ("CRC Error: %d\n", (Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_PAYLOADCRCERROR) == RFLR_IRQFLAGS_PAYLOADCRCERROR);
         App_printf ("RSSI:      %d\n", (int)Radio_RSSI (868300000));
-        App_printf ("Buffer:");
-        for (uint8_t I = 0; I < Length; I = I + 1)
+        if (Length < 8) {Radio_Write (SX1276_RegIRQFLAGS, 0xFF);break;};
+        LRWAN_Decypt (Payload, Length, (uint8_t [])LORAWAN_APPLICATION_KEY, Message);
+        App_printf ("MTYPE: %s\n", LRWAN_MTYPE_Get_String (Message->MDHR & LWAN_MHDR_MTYPE));
+        App_printf ("MIC:   ");
+        for (uint8_t I = Length - 4 - 1; I < Length; I = I + 1) {App_printf ("%02x ", Message->Buffer [I]);}
+        App_printf ("\n");
+        App_printf ("MIC:   ");
+        for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->MIC [I]);}
+        App_printf ("\n");
+        App_printf ("Payload:");
+        for (uint8_t I = 0; I < (int)(Length - 1); I = I + 1)
         {
-          if ((I % 8) == 0) {App_printf ("\r\n");}
-          App_printf ("%02x ", Buffer [I]);
+          if ((I % 8) == 0) {App_printf ("\n");}
+          App_printf ("%02x ", Message->Buffer [I]);
         }
         App_printf ("\n");
-        union LRWAN_Message * Message = (union LRWAN_Message *) Buffer;
-        App_printf ("MTYPE: %s\n", LRWAN_MTYPE_Get_String (Message->MDHR & LWAN_MHDR_MTYPE));
-        switch (Message->MDHR & LWAN_MHDR_MTYPE)
-        {
-          case LWAN_MDHR_MTYPE_JOIN_REQUEST:
-          App_printf ("AppEUI:   ");
-          for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.AppEUI [I]);}
-          App_printf ("\n");
-          App_printf ("DevEUI:   ");
-          for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.DevEUI [I]);}
-          App_printf ("\n");
-          App_printf ("DevNonce: ");
-          for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Request.DevNonce [I]);}
-          App_printf ("\n");
-          break;
-          case LWAN_MDHR_MTYPE_JOIN_ACCEPT:
-          App_printf ("AppNonce: ");
-          for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.AppNonce [I]);}
-          App_printf ("\n");
-          App_printf ("NetID: ");
-          for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.NetID [I]);}
-          App_printf ("\n");
-          App_printf ("DevAddr: ");
-          for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.DevAddr [I]);}
-          App_printf ("\n");
-          App_printf ("DLSettings: %x\n", Message->Accept.DLSettings);
-          App_printf ("RXDelay:    %x\n", Message->Accept.RXDelay);
-          break;
-          case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_UP:
-          case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_DOWN:
-          case LWAN_MDHR_MTYPE_CONFIRMED_DATA_UP:
-          case LWAN_MDHR_MTYPE_CONFIRMED_DATA_DOWN:
-          App_printf ("DevAddr: ");
-          for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->Data.DevAddr [I]);}
-          App_printf ("\n");
-          App_printf ("FHDR_ADR:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADR) == LRWAN_FHDR_ADR);
-          App_printf ("FHDR_ADRACKREQ: %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADRACKREQ) == LRWAN_FHDR_ADRACKREQ);
-          App_printf ("FHDR_ACK:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ACK) == LRWAN_FHDR_ACK);
-          App_printf ("FHDR_RFU:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_RFU) == LRWAN_FHDR_RFU);
-          App_printf ("FHDR_FPENDING:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FPENDING) == LRWAN_FHDR_FPENDING);
-          App_printf ("FHDR_FOPTSLEN:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FOPTSLEN));
-          App_printf ("FCnt: ");
-          for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Data.FCnt [I]);}
-          App_printf ("\n");
-          break;
-          case LWAN_MDHR_MTYPE_RFU:
-          case LWAN_MDHR_MTYPE_PROPRIETARY:
-          break;
-          break;
-        }
+        App_Print_LRWAN_Message (Message);
         Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         break;
       }
@@ -227,8 +256,8 @@ int main(void)
         Radio_Write (SX1276_RegPACONFIG, 0xFF);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
-        uint8_t Buf [20];
-        memset (Buf, 0x22, 20);
+        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+
         Radio_Send (Buf, 20);
         break;
       }
@@ -240,7 +269,7 @@ int main(void)
         Radio_Write (SX1276_RegPACONFIG, 0xFF);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
-        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_7 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
         struct LRWAN_Frame_Join_Request Data =
         {
           .MDHR     = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,

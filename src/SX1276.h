@@ -56,6 +56,15 @@
 #define SX1276_RegTEST2F                               0x2F
 #define SX1276_RegTEST30                               0x30
 #define SX1276_RegDETECTOPTIMIZE                       0x31
+// In LoRaWAN, a gateway applies I/Q inversion on TX, and nodes do the
+// same on RX. This ensures that gateways can talk to nodes and vice
+// versa, but gateways will not hear other gateways and nodes will not
+// hear other nodes. By uncommenting this macro, this inversion is
+// disabled and this node can hear other nodes. If two nodes both have
+// this macro set, they can talk to each other (but they can no longer
+// hear gateways). This should probably only be used when debugging
+// and/or when talking to the radio directly (e.g. like in the "raw"
+// example).
 #define SX1276_RegINVERTIQ                             0x33
 #define SX1276_RegTEST36                               0x36
 #define SX1276_RegDETECTIONTHRESHOLD                   0x37

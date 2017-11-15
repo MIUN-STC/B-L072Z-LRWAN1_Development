@@ -32,6 +32,8 @@
 
 // Network EUI
 #define LORAWAN_APPLICATION_EUI {0xe5,0xe0,0x55,0x68,0x56,0x80,0x43,0x24}
+
+// Network EUI 
 //#define LORAWAN_APPLICATION_EUI {0x0b, 0x04, 0x1e, 0xf8, 0xea, 0x37, 0x75, 0x47}
 
 // App Key
@@ -47,8 +49,7 @@ LRWAN_Frame_Join_Request
   uint8_t AppEUI [8];
   uint8_t DevEUI [8];
   uint8_t DevNonce [2];
-  //4
-  uint8_t MIC [16];
+  uint8_t MIC [4];
 };
 
 
@@ -62,9 +63,7 @@ LRWAN_Frame_Join_Accept
   uint8_t DLSettings;
   uint8_t RXDelay;
   //0 or 16 bytes.
-  //uint8_t CFList [16];
-  //4
-  //uint8_t MIC [16];
+  uint8_t CFList [16];
 };
 
 
@@ -83,7 +82,12 @@ LRWAN_Message_Data
 union 
 LRWAN_Message
 {
-  uint8_t MDHR;
+  struct
+  {
+    uint8_t MDHR;
+    uint8_t Buffer [255];
+    uint8_t MIC [4];
+  };
   struct LRWAN_Frame_Join_Request Request;
   struct LRWAN_Frame_Join_Accept Accept;
   struct LRWAN_Message_Data Data;
@@ -127,6 +131,7 @@ static void reverse (void * start, int size)
     }
 }
 
+
 void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16])
 {
   uint8_t const Size = 19;
@@ -138,6 +143,22 @@ void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16]
   LoRaMacJoinComputeMic (Data, Size, Key, Frame->MIC);
 }
 
+
+void LRWAN_Decypt 
+(
+  uint8_t const * Payload, 
+  uint8_t Size, 
+  uint8_t const Key [16], 
+  union LRWAN_Message * Frame
+)
+{
+  union LRWAN_Message * Message = (union LRWAN_Message *) Payload;
+  LoRaMacJoinDecrypt (Message->Buffer, Size - 1, Key, Frame->Buffer);
+  Frame->MDHR = Message->MDHR;
+  LoRaMacJoinComputeMic ((uint8_t *)Frame, Size - 4, Key, Frame->MIC);
+}
+
+            
 
 
 
