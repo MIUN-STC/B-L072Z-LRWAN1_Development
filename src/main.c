@@ -16,7 +16,6 @@ https://feabhas.gitbooks.io/stm32f4-cmsis/content/gpio_as_an_external_interrupt.
 #include "App_printf.h"
 
 
-
 void Print_Radio ()
 {
   uint8_t R;
@@ -110,9 +109,21 @@ void App_Print_LRWAN_Message (union LRWAN_Message * Message)
 int App_Mode = APP_MODE_IDLE;
 int X = 0;
 int App_TX_Counter = 0;
+struct LRWAN1 LRWAN = 
+{
+  .Key      = LORAWAN_APPLICATION_KEY,
+  .Request  = (struct LRWAN1_Request)
+  {
+    .MDHR   = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,
+    .DevEUI = LORAWAN_MAC,
+    .AppEUI = LORAWAN_APPLICATION_EUI
+  }
+};
+
 
 int main(void)
 {
+  {
   NVIC_SetPriority (EXTI0_1_IRQn, 0);
   NVIC_SetPriority (EXTI2_3_IRQn, 0);
   NVIC_SetPriority (EXTI4_15_IRQn, 0);
@@ -162,9 +173,9 @@ int main(void)
   SPI_Init (RADIO_SPI);
   Radio_Sleep ();
   //Radio_Set_Carrier_Frequency (800300000);
+  Radio_Set_Carrier_Frequency (868300000);
   //Radio_Set_Carrier_Frequency (868300000);
-  //Radio_Set_Carrier_Frequency (868300000);
-  Radio_Set_Carrier_Frequency (869900000);
+  //Radio_Set_Carrier_Frequency (869900000);
   Radio_Write (SX1276_RegFIFOADDRPTR, 0x00);
   Radio_Write (SX1276_RegFIFOTXBASEADDR, 0);
   Radio_Write (SX1276_RegFIFORXBASEADDR, 0);
@@ -175,14 +186,10 @@ int main(void)
   Radio_Write (SX1276_RegINVERTIQ, 0x67); //IQ inverted. Node to GW
   //Radio_Write (SX1276_RegINVERTIQ, 0x27); //IQ non inverted. Node to Node
   //Radio_Write (SX1276_RegMODEMCONFIG3, RFLR_MODEMCONFIG3_LOWDATARATEOPTIMIZE_ON | RFLR_MODEMCONFIG3_AGCAUTO_OFF);
-  
-  
-  
   App_printf ("Loop %s.\r\n", "main");
+  LRWAN1_Init (&LRWAN);
+  }
   
-  uint8_t Buf [20];
-  memset (Buf, 0x22, 20);
-        
   while (1)
   {
 
@@ -219,20 +226,32 @@ int main(void)
       {
         App_Mode = APP_MODE_LISTEN0;
         GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        union LRWAN_Message Message [1];
-        uint8_t Payload [256];
         uint8_t Length;
-        Length = Radio_Receive ((uint8_t *)Payload, 255);
+        Length = Radio_Receive (LRWAN.Raw, 255);
         App_printf ("\nRX EVENT\n");
         App_printf ("Length:    %d\n", (int)Length);
         App_printf ("CRC On:    %d\n", (Radio_Read (SX1276_RegHOPCHANNEL) & RFLR_HOPCHANNEL_CRCONPAYLOAD_ON) == RFLR_HOPCHANNEL_CRCONPAYLOAD_ON);
         App_printf ("CRC Error: %d\n", (Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_PAYLOADCRCERROR) == RFLR_IRQFLAGS_PAYLOADCRCERROR);
         App_printf ("RSSI:      %d\n", (int)Radio_RSSI (868300000));
         if (Length < 8) {Radio_Write (SX1276_RegIRQFLAGS, 0xFF);break;};
-        LRWAN_Decypt (Payload, Length, (uint8_t [])LORAWAN_APPLICATION_KEY, Message);
-        App_printf ("MTYPE: %s\n", LRWAN_MTYPE_Get_String (Message->MDHR & LWAN_MHDR_MTYPE));
+        LRWAN1_Accept (&LRWAN, Length);
         App_printf ("MIC:   ");
-        for (uint8_t I = Length - 4 - 1; I < Length; I = I + 1) {App_printf ("%02x ", Message->Buffer [I]);}
+        for (uint8_t I = Length - 4; I < Length; I = I + 1) {App_printf ("%02x ", LRWAN.Accept_Compute_MIC [I]);}
+        App_printf ("\n");
+        App_printf ("MIC:   ");
+        for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", LRWAN.MIC [I]);}
+        App_printf ("\n");
+        App_printf ("Payload:   ");
+        for (uint8_t I = 0; I < Length; I = I + 1) {App_printf ("%02x ", LRWAN.Accept_Compute_MIC [I]);}
+        App_printf ("\n");
+        
+        
+        
+        /*
+        LRWAN_Decypt (Payload, Length, (uint8_t [])LORAWAN_APPLICATION_KEY, Result);
+        App_printf ("MTYPE: %s\n", LRWAN_MTYPE_Get_String (Result->MDHR & LWAN_MHDR_MTYPE));
+        App_printf ("MIC:   ");
+        for (uint8_t I = Length - 4 - 1; I < Length; I = I + 1) {App_printf ("%02x ", Result->Buffer [I]);}
         App_printf ("\n");
         App_printf ("MIC:   ");
         for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->MIC [I]);}
@@ -245,6 +264,7 @@ int main(void)
         }
         App_printf ("\n");
         App_Print_LRWAN_Message (Message);
+        */
         Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         break;
       }
@@ -257,19 +277,33 @@ int main(void)
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
-
-        Radio_Send (Buf, 20);
+        Radio_Send ((uint8_t []) {0x22, 0x22, 0x22}, 3);
         break;
       }
 
       case APP_MODE_JOIN_TRANSMIT:
       {
         App_Mode = APP_MODE_TRANSMITTING;
+        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
         App_TX_Counter++;
         Radio_Write (SX1276_RegPACONFIG, 0xFF);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+        
+        ///*
+        LRWAN1_Join (&LRWAN);
+        for (uint8_t I = 0; I < 23; I = I + 1)
+        {
+          if ((I % 8) == 0) {App_printf ("\n");}
+          uint8_t * A = (uint8_t *) &(LRWAN.Request);
+          App_printf ("%02x ", A [I]);
+        }
+        
+        Radio_Send ((uint8_t *) &(LRWAN.Request), 23);
+        //*/
+        
+        /*
         struct LRWAN_Frame_Join_Request Data =
         {
           .MDHR     = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,
@@ -279,8 +313,15 @@ int main(void)
         Data.DevNonce [0] = Radio_Read (SX1276_RegRSSIWIDEBAND) + App_TX_Counter;
         Data.DevNonce [1] = App_TX_Counter;
         LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
+        for (uint8_t I = 0; I < 23; I = I + 1)
+        {
+          if ((I % 8) == 0) {App_printf ("\n");}
+          uint8_t * A = (uint8_t *) &(Data);
+          App_printf ("%02x ", A [I]);
+        }
+        
         Radio_Send ((uint8_t *) &Data, 23);
-        GPIO_Pin_Set (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
+        */
         break;
       }
 

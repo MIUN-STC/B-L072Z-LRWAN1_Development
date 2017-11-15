@@ -143,23 +143,52 @@ void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16]
   LoRaMacJoinComputeMic (Data, Size, Key, Frame->MIC);
 }
 
-
-void LRWAN_Decypt 
-(
-  uint8_t const * Payload, 
-  uint8_t Size, 
-  uint8_t const Key [16], 
-  union LRWAN_Message * Frame
-)
+struct __attribute__((__packed__)) 
+LRWAN1_Request
 {
-  union LRWAN_Message * Message = (union LRWAN_Message *) Payload;
-  LoRaMacJoinDecrypt (Message->Buffer, Size - 1, Key, Frame->Buffer);
-  Frame->MDHR = Message->MDHR;
-  LoRaMacJoinComputeMic ((uint8_t *)Frame, Size - 4, Key, Frame->MIC);
+  uint8_t MDHR;
+  uint8_t AppEUI [8];
+  uint8_t DevEUI [8];
+  uint8_t DevNonce [2];
+  uint8_t MIC [4];
+};
+
+
+struct LRWAN1
+{
+  uint8_t Raw [256];
+  union
+  {
+    struct
+    {
+      uint8_t MDHR;
+      uint8_t MAC_Payload [255];
+    };
+    uint8_t Accept_Compute_MIC [256];
+  };
+  struct LRWAN1_Request Request;
+  uint8_t Key [16];
+  //Only the 4 first of MIC is used.
+  uint8_t MIC [16];
+};
+
+void LRWAN1_Accept (struct LRWAN1 * Item, uint8_t Length)
+{
+  Item->MDHR = Item->Raw [0];
+  LoRaMacJoinDecrypt (Item->Raw + 1, Length - 1, Item->Key, Item->MAC_Payload);
+  LoRaMacJoinComputeMic (Item->Accept_Compute_MIC, Length - 4, Item->Key, Item->MIC);
 }
 
-            
+void LRWAN1_Init (struct LRWAN1 * Item)
+{
+  reverse (Item->Request.AppEUI, 8);
+  reverse (Item->Request.DevEUI, 8);
+}
 
-
-
-
+void LRWAN1_Join (struct LRWAN1 * Item)
+{
+  uint8_t const Length = 19;
+  Item->Request.DevNonce [0]++;
+  Item->Request.DevNonce [1]++;
+  LoRaMacJoinComputeMic ((uint8_t *) &(Item->Request), Length, Item->Key, Item->Request.MIC);
+}
