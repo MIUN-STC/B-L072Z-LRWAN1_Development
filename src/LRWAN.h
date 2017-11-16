@@ -42,30 +42,6 @@
  
 #define LORAWAN_MAC {0x00, 0x80, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00} 
 
-struct __attribute__((__packed__)) 
-LRWAN_Frame_Join_Request
-{
-  uint8_t MDHR;
-  uint8_t AppEUI [8];
-  uint8_t DevEUI [8];
-  uint8_t DevNonce [2];
-  uint8_t MIC [4];
-};
-
-
-struct __attribute__((__packed__)) 
-LRWAN_Frame_Join_Accept
-{
-  uint8_t MDHR;
-  uint8_t AppNonce [3];
-  uint8_t NetID [3];
-  uint8_t DevAddr [4];
-  uint8_t DLSettings;
-  uint8_t RXDelay;
-  //0 or 16 bytes.
-  uint8_t CFList [16];
-};
-
 
 struct __attribute__((__packed__)) 
 LRWAN_Message_Data
@@ -77,20 +53,6 @@ LRWAN_Message_Data
   //0..15B
   //uint8_t FOpts [15];
   //uint8_t MIC [16];
-};
-
-union 
-LRWAN_Message
-{
-  struct
-  {
-    uint8_t MDHR;
-    uint8_t Buffer [255];
-    uint8_t MIC [4];
-  };
-  struct LRWAN_Frame_Join_Request Request;
-  struct LRWAN_Frame_Join_Accept Accept;
-  struct LRWAN_Message_Data Data;
 };
 
 
@@ -132,17 +94,6 @@ static void reverse (void * start, int size)
 }
 
 
-void LRWAN_Join (struct LRWAN_Frame_Join_Request * Frame, uint8_t const Key [16])
-{
-  uint8_t const Size = 19;
-  uint8_t const * Data = (uint8_t const *) Frame;
-  reverse (Frame->AppEUI, 8);
-  reverse (Frame->DevEUI, 8);
-  //Frame->DevNonce [0] = 0;
-  //Frame->DevNonce [1] = 0;
-  LoRaMacJoinComputeMic (Data, Size, Key, Frame->MIC);
-}
-
 struct __attribute__((__packed__)) 
 LRWAN1_Request
 {
@@ -150,7 +101,22 @@ LRWAN1_Request
   uint8_t AppEUI [8];
   uint8_t DevEUI [8];
   uint8_t DevNonce [2];
-  uint8_t MIC [4];
+  //Only the 4 first of MIC is used.
+  uint8_t MIC [16];
+};
+
+
+struct __attribute__((__packed__)) 
+LRWAN1_Accept
+{
+  uint8_t MDHR;
+  uint8_t AppNonce [3];
+  uint8_t NetID [3];
+  uint8_t DevAddr [4];
+  uint8_t DLSettings;
+  uint8_t RXDelay;
+  //0 or 16 bytes.
+  uint8_t CFList [16];
 };
 
 
@@ -164,13 +130,18 @@ struct LRWAN1
       uint8_t MDHR;
       uint8_t MAC_Payload [255];
     };
+    uint8_t Payload [256];
     uint8_t Accept_Compute_MIC [256];
+    struct LRWAN1_Accept Accept;
   };
   struct LRWAN1_Request Request;
   uint8_t Key [16];
   //Only the 4 first of MIC is used.
   uint8_t MIC [16];
+  
+  uint8_t Spreading_Factor;
 };
+
 
 void LRWAN1_Accept (struct LRWAN1 * Item, uint8_t Length)
 {
@@ -179,11 +150,13 @@ void LRWAN1_Accept (struct LRWAN1 * Item, uint8_t Length)
   LoRaMacJoinComputeMic (Item->Accept_Compute_MIC, Length - 4, Item->Key, Item->MIC);
 }
 
+
 void LRWAN1_Init (struct LRWAN1 * Item)
 {
   reverse (Item->Request.AppEUI, 8);
   reverse (Item->Request.DevEUI, 8);
 }
+
 
 void LRWAN1_Join (struct LRWAN1 * Item)
 {
