@@ -37,63 +37,40 @@ void Print_Radio_FError ()
 }
 
 
-
-void App_Print_LRWAN_Message (union LRWAN_Message * Message)
+void App_Print_LRWAN1 (struct LRWAN1 * Item, uint8_t Length)
 {
-  switch (Message->MDHR & LWAN_MHDR_MTYPE)
+  App_printf ("Length:    %d\n", (int)Length);
+  App_printf ("CRC On:    %d\n", (Radio_Read (SX1276_RegHOPCHANNEL) & RFLR_HOPCHANNEL_CRCONPAYLOAD_ON) == RFLR_HOPCHANNEL_CRCONPAYLOAD_ON);
+  App_printf ("CRC Error: %d\n", (Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_PAYLOADCRCERROR) == RFLR_IRQFLAGS_PAYLOADCRCERROR);
+  App_printf ("RSSI:      %d\n", (int)Radio_RSSI (868300000));
+  App_printf ("Payload:   \n");
+  for (uint8_t I = 0; I < Length; I = I + 1) {App_printf ("%02x ", Item->Payload [I]);}
+  App_printf ("\n");
+  App_printf ("MIC:   ");
+  for (uint8_t I = Length - 4; I < Length; I = I + 1) {App_printf ("%02x ", Item->Accept_Compute_MIC [I]);}
+  App_printf ("\n");
+  App_printf ("MIC:   ");
+  for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Item->MIC [I]);}
+  App_printf ("\n");
+  switch (Item->MDHR & LWAN_MHDR_MTYPE)
   {
-    case LWAN_MDHR_MTYPE_JOIN_REQUEST:
-    {
-    App_printf ("AppEUI:   ");
-    for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.AppEUI [I]);}
-    App_printf ("\n");
-    App_printf ("DevEUI:   ");
-    for (uint8_t I = 0; I < 8; I = I + 1) {App_printf ("%02x ", Message->Request.DevEUI [I]);}
-    App_printf ("\n");
-    App_printf ("DevNonce: ");
-    for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Request.DevNonce [I]);}
-    App_printf ("\n");
-    break;
-    }
     case LWAN_MDHR_MTYPE_JOIN_ACCEPT:
     {
-    App_printf ("AppNonce: ");
-    for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.AppNonce [I]);}
-    App_printf ("\n");
-    App_printf ("NetID: ");
-    for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Message->Accept.NetID [I]);}
-    App_printf ("\n");
-    App_printf ("DevAddr: ");
-    for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->Accept.DevAddr [I]);}
-    App_printf ("\n");
-    App_printf ("DLSettings: %x\n", Message->Accept.DLSettings);
-    App_printf ("RXDelay:    %x\n", Message->Accept.RXDelay);
-    break;
+      App_printf ("AppNonce: ");
+      for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Item->Accept.AppNonce [I]);}
+      App_printf ("\n");
+      App_printf ("NetID: ");
+      for (uint8_t I = 0; I < 3; I = I + 1) {App_printf ("%02x ", Item->Accept.NetID [I]);}
+      App_printf ("\n");
+      App_printf ("DevAddr: ");
+      for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Item->Accept.DevAddr [I]);}
+      App_printf ("\n");
+      App_printf ("DLSettings: %x\n", Item->Accept.DLSettings);
+      App_printf ("RXDelay:    %x\n", Item->Accept.RXDelay);
+      break;
     }
-    case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_UP:
-    case LWAN_MDHR_MTYPE_UNCONFIRMED_DATA_DOWN:
-    case LWAN_MDHR_MTYPE_CONFIRMED_DATA_UP:
-    case LWAN_MDHR_MTYPE_CONFIRMED_DATA_DOWN:
-    App_printf ("DevAddr: ");
-    for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->Data.DevAddr [I]);}
-    App_printf ("\n");
-    App_printf ("FHDR_ADR:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADR) == LRWAN_FHDR_ADR);
-    App_printf ("FHDR_ADRACKREQ: %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ADRACKREQ) == LRWAN_FHDR_ADRACKREQ);
-    App_printf ("FHDR_ACK:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_ACK) == LRWAN_FHDR_ACK);
-    App_printf ("FHDR_RFU:       %d\n", (Message->Data.FCtrl & LRWAN_FHDR_RFU) == LRWAN_FHDR_RFU);
-    App_printf ("FHDR_FPENDING:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FPENDING) == LRWAN_FHDR_FPENDING);
-    App_printf ("FHDR_FOPTSLEN:  %d\n", (Message->Data.FCtrl & LRWAN_FHDR_FOPTSLEN));
-    App_printf ("FCnt: ");
-    for (uint8_t I = 0; I < 2; I = I + 1) {App_printf ("%02x ", Message->Data.FCnt [I]);}
-    App_printf ("\n");
-    break;
-    case LWAN_MDHR_MTYPE_RFU:
-    case LWAN_MDHR_MTYPE_PROPRIETARY:
-    break;
-    break;
   }
 }
-
 
 
 #define APP_MODE_IDLE                 0
@@ -117,7 +94,8 @@ struct LRWAN1 LRWAN =
     .MDHR   = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,
     .DevEUI = LORAWAN_MAC,
     .AppEUI = LORAWAN_APPLICATION_EUI
-  }
+  },
+  .Spreading_Factor = RFLR_MODEMCONFIG2_SF_12
 };
 
 
@@ -209,7 +187,7 @@ int main(void)
       {
         App_Mode = APP_MODE_LISTEN;
         GPIO_Pin_Clear (LED_LD3_BLUE_PORT, LED_LD3_BLUE_PIN);
-        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_OFF);
+        Radio_Write (SX1276_RegMODEMCONFIG2, LRWAN.Spreading_Factor | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_OFF);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
         Radio_Write (SX1276_RegOPMODE, RFLR_OPMODE_LONGRANGEMODE_ON | RFLR_OPMODE_RXCONTINUOUS);
         Radio_Write (SX1276_RegSYMBTIMEOUTLSB, 0x18);
@@ -229,42 +207,9 @@ int main(void)
         uint8_t Length;
         Length = Radio_Receive (LRWAN.Raw, 255);
         App_printf ("\nRX EVENT\n");
-        App_printf ("Length:    %d\n", (int)Length);
-        App_printf ("CRC On:    %d\n", (Radio_Read (SX1276_RegHOPCHANNEL) & RFLR_HOPCHANNEL_CRCONPAYLOAD_ON) == RFLR_HOPCHANNEL_CRCONPAYLOAD_ON);
-        App_printf ("CRC Error: %d\n", (Radio_Read (SX1276_RegIRQFLAGS) & RFLR_IRQFLAGS_PAYLOADCRCERROR) == RFLR_IRQFLAGS_PAYLOADCRCERROR);
-        App_printf ("RSSI:      %d\n", (int)Radio_RSSI (868300000));
         if (Length < 8) {Radio_Write (SX1276_RegIRQFLAGS, 0xFF);break;};
         LRWAN1_Accept (&LRWAN, Length);
-        App_printf ("MIC:   ");
-        for (uint8_t I = Length - 4; I < Length; I = I + 1) {App_printf ("%02x ", LRWAN.Accept_Compute_MIC [I]);}
-        App_printf ("\n");
-        App_printf ("MIC:   ");
-        for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", LRWAN.MIC [I]);}
-        App_printf ("\n");
-        App_printf ("Payload:   ");
-        for (uint8_t I = 0; I < Length; I = I + 1) {App_printf ("%02x ", LRWAN.Accept_Compute_MIC [I]);}
-        App_printf ("\n");
-        
-        
-        
-        /*
-        LRWAN_Decypt (Payload, Length, (uint8_t [])LORAWAN_APPLICATION_KEY, Result);
-        App_printf ("MTYPE: %s\n", LRWAN_MTYPE_Get_String (Result->MDHR & LWAN_MHDR_MTYPE));
-        App_printf ("MIC:   ");
-        for (uint8_t I = Length - 4 - 1; I < Length; I = I + 1) {App_printf ("%02x ", Result->Buffer [I]);}
-        App_printf ("\n");
-        App_printf ("MIC:   ");
-        for (uint8_t I = 0; I < 4; I = I + 1) {App_printf ("%02x ", Message->MIC [I]);}
-        App_printf ("\n");
-        App_printf ("Payload:");
-        for (uint8_t I = 0; I < (int)(Length - 1); I = I + 1)
-        {
-          if ((I % 8) == 0) {App_printf ("\n");}
-          App_printf ("%02x ", Message->Buffer [I]);
-        }
-        App_printf ("\n");
-        App_Print_LRWAN_Message (Message);
-        */
+        App_Print_LRWAN1 (&LRWAN, Length);
         Radio_Write (SX1276_RegIRQFLAGS, 0xFF);
         break;
       }
@@ -276,7 +221,7 @@ int main(void)
         Radio_Write (SX1276_RegPACONFIG, 0xFF);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
-        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
+        Radio_Write (SX1276_RegMODEMCONFIG2, LRWAN.Spreading_Factor | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
         Radio_Send ((uint8_t []) {0x22, 0x22, 0x22}, 3);
         break;
       }
@@ -289,9 +234,7 @@ int main(void)
         Radio_Write (SX1276_RegPACONFIG, 0xFF);
         Radio_Write (SX1276_RegDIOMAPPING1, RFLR_DIOMAPPING1_DIO0_01);
         Radio_Write (SX1276_RegMODEMCONFIG1, RFLR_MODEMCONFIG1_BW_125_KHZ | RFLR_MODEMCONFIG1_CODINGRATE_4_5 | RFLR_MODEMCONFIG1_IMPLICITHEADER_OFF);
-        Radio_Write (SX1276_RegMODEMCONFIG2, RFLR_MODEMCONFIG2_SF_12 | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
-        
-        ///*
+        Radio_Write (SX1276_RegMODEMCONFIG2, LRWAN.Spreading_Factor | RFLR_MODEMCONFIG2_TXCONTINUOUSMODE_OFF | RFLR_MODEMCONFIG2_RXPAYLOADCRC_ON);
         LRWAN1_Join (&LRWAN);
         for (uint8_t I = 0; I < 23; I = I + 1)
         {
@@ -299,29 +242,7 @@ int main(void)
           uint8_t * A = (uint8_t *) &(LRWAN.Request);
           App_printf ("%02x ", A [I]);
         }
-        
         Radio_Send ((uint8_t *) &(LRWAN.Request), 23);
-        //*/
-        
-        /*
-        struct LRWAN_Frame_Join_Request Data =
-        {
-          .MDHR     = LWAN_MDHR_MTYPE_JOIN_REQUEST | LWAN_MDHR_MAJOR_R1,
-          .DevEUI   = LORAWAN_MAC,
-          .AppEUI   = LORAWAN_APPLICATION_EUI
-        };
-        Data.DevNonce [0] = Radio_Read (SX1276_RegRSSIWIDEBAND) + App_TX_Counter;
-        Data.DevNonce [1] = App_TX_Counter;
-        LRWAN_Join (&Data, (uint8_t [])LORAWAN_APPLICATION_KEY);
-        for (uint8_t I = 0; I < 23; I = I + 1)
-        {
-          if ((I % 8) == 0) {App_printf ("\n");}
-          uint8_t * A = (uint8_t *) &(Data);
-          App_printf ("%02x ", A [I]);
-        }
-        
-        Radio_Send ((uint8_t *) &Data, 23);
-        */
         break;
       }
 
